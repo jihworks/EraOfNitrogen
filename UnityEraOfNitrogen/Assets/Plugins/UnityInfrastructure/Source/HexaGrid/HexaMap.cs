@@ -425,6 +425,11 @@ namespace Jih.Unity.Infrastructure.HexaGrid
 
                 foreach (var next in access(current))
                 {
+                    if (next == current)
+                    {
+                        continue;
+                    }
+
                     if (next.Map != this)
                     {
                         throw new InvalidOperationException($"The neighbor cell '{next.Coord}' does not exist in the map.");

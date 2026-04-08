@@ -1,0 +1,18 @@
+{
+    "name": "Jih.Unity.Infrastructure.Editor",
+    "rootNamespace": "Jih.Unity.Infrastructure.Editor",
+    "references": [
+        "GUID:5d8ed897c1ca6b740a9ed686405a121b"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

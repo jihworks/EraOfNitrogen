@@ -13,12 +13,12 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
 {
     public class MapProvince
     {
-        public MapCell CapitalCell { get; }
+        public MapCell CityCell { get; }
         public List<MapCell> Cells { get; } = new();
 
-        public MapProvince(MapCell capitalCell)
+        public MapProvince(MapCell cityCell)
         {
-            CapitalCell = capitalCell;
+            CityCell = cityCell;
         }
     }
 }

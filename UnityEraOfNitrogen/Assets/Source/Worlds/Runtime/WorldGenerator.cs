@@ -32,16 +32,16 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             List<MapCell> landCells = pangaeaGenerator.ResultLandCells;
 
             ProvinceGenerator provinceGenerator = new(ProvinceGenerator.Settings.Default, random, landCells);
-            if (provinceGenerator.ResultCapitalCells is null ||
+            if (provinceGenerator.ResultCityCells is null ||
                 provinceGenerator.ResultProvinces is null)
             {
                 throw new InvalidOperationException();
             }
 
-            List<MapCell> capitalCells = provinceGenerator.ResultCapitalCells;
+            List<MapCell> cityCells = provinceGenerator.ResultCityCells;
             List<MapProvince> provinces = provinceGenerator.ResultProvinces; 
 
-            RoadNetworkGenerator roadNetworkGenerator = new(RoadNetworkGenerator.Settings.Default, mapGrid, capitalCells);
+            RoadNetworkGenerator roadNetworkGenerator = new(RoadNetworkGenerator.Settings.Default, mapGrid, cityCells);
         }
     }
 }

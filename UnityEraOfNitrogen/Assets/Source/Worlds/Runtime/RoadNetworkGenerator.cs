@@ -18,34 +18,34 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
     {
         readonly Settings _settings;
         readonly MapGrid _mapGrid;
-        readonly IReadOnlyList<MapCell> _capitalCells;
+        readonly IReadOnlyList<MapCell> _cityCells;
 
-        public RoadNetworkGenerator(Settings settings, MapGrid mapGrid, IReadOnlyList<MapCell> capitalCells)
+        public RoadNetworkGenerator(Settings settings, MapGrid mapGrid, IReadOnlyList<MapCell> cityCells)
         {
             _settings = settings;
             _mapGrid = mapGrid;
-            _capitalCells = capitalCells;
+            _cityCells = cityCells;
         }
 
         public void Execute()
         {
-            foreach (var cell in _capitalCells)
+            foreach (var cell in _cityCells)
             {
                 cell.HasRoad = true;
             }
 
-            Connect(_mapGrid, _capitalCells);
+            Connect(_mapGrid, _cityCells);
         }
 
-        static void Connect(MapGrid mapGrid, IReadOnlyList<MapCell> capitalCells)
+        static void Connect(MapGrid mapGrid, IReadOnlyList<MapCell> cityCells)
         {
-            Queue<MapCell> startings = new(capitalCells);
+            Queue<MapCell> startings = new(cityCells);
             while (startings.TryDequeue(out MapCell start))
             {
                 HexaCoord startCoord = start.Coord;
 
-                List<(MapCell Cell, int Distance)> targets = new(capitalCells.Count);
-                targets.AddRange(capitalCells.Where(c => c != start).Select(c => (c, HexaCoord.Distance(c.Coord, startCoord))));
+                List<(MapCell Cell, int Distance)> targets = new(cityCells.Count);
+                targets.AddRange(cityCells.Where(c => c != start).Select(c => (c, HexaCoord.Distance(c.Coord, startCoord))));
                 targets.Sort((l, r) => l.Distance.CompareTo(r.Distance));
 
                 HexaPathResult result = new();

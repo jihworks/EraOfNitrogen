@@ -16,14 +16,6 @@ using System.Reflection;
 
 namespace Jih.Unity.Infrastructure.Json
 {
-    /// <remarks>
-    /// Marked property must have setter.
-    /// </remarks>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
-    public class JsonSaveAttribute : Attribute
-    {
-    }
-
     public class JsonSaveContractResolver : DefaultContractResolver
     {
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
@@ -31,7 +23,7 @@ namespace Jih.Unity.Infrastructure.Json
             List<MemberInfo> members = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .Cast<MemberInfo>()
                 .Concat(type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                .Where(m => m.GetCustomAttribute<JsonSaveAttribute>() is not null)
+                .Where(m => m.GetCustomAttribute<JsonSaveMemberAttribute>() is not null)
                 .ToList();
 
             foreach (var member in members)
@@ -62,47 +54,6 @@ namespace Jih.Unity.Infrastructure.Json
             }
 
             return result;
-        }
-    }
-
-    /// <remarks>
-    /// Using custom resolver that <see cref="JsonSaveContractResolver"/>.<br/>
-    /// Supports only opt-in by <see cref="JsonSaveAttribute"/>.<br/>
-    /// If there is only <see cref="JsonPropertyAttribute"/>, it will be <b>excluded</b>.
-    /// </remarks>
-    public static class JsonSave
-    {
-        static readonly JsonSerializerSettings _settings = new()
-        {
-            ContractResolver = new JsonSaveContractResolver(),
-
-            // This option allows private constructors.
-            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-
-            // This option will replace collection fields.
-            ObjectCreationHandling = ObjectCreationHandling.Replace,
-
-            PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-
-            TypeNameHandling = TypeNameHandling.Auto,
-            TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-
-            Formatting = Formatting.Indented,
-        };
-
-        public static string SerializeObject(object obj)
-        {
-            return JsonConvert.SerializeObject(obj, _settings);
-        }
-
-        public static T? DeserializeObject<T>(string json)
-        {
-            return JsonConvert.DeserializeObject<T>(json);
-        }
-
-        public static void PopulateObject(string json, object target)
-        {
-            JsonConvert.PopulateObject(json, target, _settings);
         }
     }
 }

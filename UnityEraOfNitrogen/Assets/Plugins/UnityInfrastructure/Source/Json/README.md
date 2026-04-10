@@ -4,10 +4,8 @@ Some types in this namespace depends on `Newtonsoft.Json`.
 
 ## Install Package
 
-Install `com.unity.nuget.newtonsoft-json` package from Unity Package Manager(UPM).  
-Select top `+` button and select `Install package by name...`.
+Install `com.unity.nuget.newtonsoft-json` as name by Unity Package Manager(UPM).
 
 ## Conditional Compile
 
-Add `USE_NEWTONSOFT_JSON` to `Scripting Define Symbols` list.  
-Open `Project Settings` and go to `Player` tab and open `Other Settings` section.
+Add `INFRASTRUCTURE_USE_NEWTONSOFT_JSON` as symbol.

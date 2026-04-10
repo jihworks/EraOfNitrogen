@@ -5,7 +5,7 @@
 
 #nullable enable
 
-#if USE_NEWTONSOFT_JSON
+#if INFRASTRUCTURE_USE_NEWTONSOFT_JSON
 
 using Newtonsoft.Json;
 using System.Collections.Generic;

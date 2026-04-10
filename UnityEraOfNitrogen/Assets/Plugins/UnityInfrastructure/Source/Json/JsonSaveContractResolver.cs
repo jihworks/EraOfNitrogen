@@ -11,49 +11,94 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Jih.Unity.Infrastructure.Json
 {
-    public class JsonSaveContractResolver : DefaultContractResolver
+    class JsonSaveContractResolver : DefaultContractResolver
     {
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
         {
-            List<MemberInfo> members = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                .Cast<MemberInfo>()
-                .Concat(type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                .Where(m => m.GetCustomAttribute<JsonSaveMemberAttribute>() is not null)
-                .ToList();
-
-            foreach (var member in members)
+            static void CheckIncludeOrExclude(Type container, MemberInfo member, out bool hasInclude, out bool hasExclude)
             {
-                if (member is not PropertyInfo prop)
+                hasInclude = member.GetCustomAttribute<JsonPropertyAttribute>() is not null;
+                hasExclude = member.GetCustomAttribute<JsonIgnoreAttribute>() is not null;
+                if (!hasInclude && !hasExclude)
                 {
-                    continue;
-                }
-                if (!prop.CanRead)
-                {
-                    throw new InvalidOperationException($"The JSON save property '{prop.Name}' in '{type.FullName}' missing getter.");
-                }
-                if (!prop.CanWrite)
-                {
-                    throw new InvalidOperationException($"The JSON save property '{prop.Name}' in '{type.FullName}' missing setter.");
+                    throw new JsonSaveException($"Member '{member.Name}' in '{container.FullName}' missing JsonProperty or JsonIgnore attribute. All members must be marked explicitly.", container, member);
                 }
             }
 
-            List<JsonProperty> result = new(members.Count);
-
-            foreach (var member in members)
+            static void CheckConstructors(Type container, IReadOnlyList<ConstructorInfo> constructors)
             {
-                JsonProperty jsonProperty = CreateProperty(member, memberSerialization);
-                jsonProperty.Writable = true;
-                jsonProperty.Readable = true;
+                bool anyFound = false;
+                foreach (var constructor in constructors)
+                {
+                    if (constructor.GetParameters().Length > 0)
+                    {
+                        continue;
+                    }
+                    if (constructor.GetCustomAttribute<JsonConstructorAttribute>() is null)
+                    {
+                        continue;
+                    }
 
-                result.Add(jsonProperty);
+                    anyFound = true;
+                }
+
+                if (!anyFound)
+                {
+                    throw new JsonSaveException($"Type '{container.FullName}' must have explicit default-constructor with JsonConstructor attribute.", container);
+                }
             }
 
-            return result;
+            ConstructorInfo[] constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            CheckConstructors(type, constructors);
+
+            Type? currentType = type;
+            while (currentType is not null && currentType != typeof(object))
+            {
+                if (currentType.GetCustomAttribute<JsonObjectAttribute>() is null)
+                {
+                    throw new JsonSaveException($"JSON save type '{currentType.FullName}' must marked with JsonObjectAttribute.", currentType);
+                }
+
+                FieldInfo[] fields = currentType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                foreach (var field in fields)
+                {
+                    bool compilerGenerated = field.GetCustomAttribute<CompilerGeneratedAttribute>() is not null;
+                    if (compilerGenerated)
+                    {
+                        continue;
+                    }
+
+                    CheckIncludeOrExclude(type, field, out _, out _);
+                }
+
+                PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                foreach (var property in properties)
+                {
+                    CheckIncludeOrExclude(type, property, out _, out bool hasExclude);
+                    if (hasExclude)
+                    {
+                        continue;
+                    }
+
+                    if (!property.CanRead)
+                    {
+                        throw new JsonSaveException($"JSON save Property '{property.Name}' in type '{currentType.FullName}' missing getter.", currentType, property);
+                    }
+                    if (!property.CanWrite)
+                    {
+                        throw new JsonSaveException($"JSON save Property '{property.Name}' in type '{currentType.FullName}' missing setter.", currentType, property);
+                    }
+                }
+
+                currentType = currentType.BaseType;
+            }
+
+            return base.CreateProperties(type, memberSerialization);
         }
     }
 }

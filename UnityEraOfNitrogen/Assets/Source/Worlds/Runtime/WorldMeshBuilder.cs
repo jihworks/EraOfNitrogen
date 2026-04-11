@@ -141,7 +141,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             {
                 string name = $"Land Mesh {chunk.ChunkX} x {chunk.ChunkY}";
 
-                Mesh mesh = chunk.MeshCollector.GetTrianglesMesh(true, true);
+                Mesh mesh = chunk.MeshCollector.ToTrianglesMesh(true, true);
                 mesh.name = name;
 
                 GameObject meshObj = new() { name = name, };

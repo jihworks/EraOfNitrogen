@@ -110,22 +110,45 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         {
             GeneratorCell nextCell = (GeneratorCell)next;
 
-            int cost = 100; // 기본 코스트.
+            int cost = 200; // 기본 코스트.
             if (nextCell.HasRoad)
             {
-                cost -= 20;
+                cost -= 100;
             }
 
-            int roadCount = next.EnumerateNeighbors().Cast<GeneratorCell>().Count(c => c != current && c.HasRoad);
-            cost -= roadCount * 10;
+            GeneratorGrid grid = (GeneratorGrid)next.Map;
+            HexaCoord nextCoord = next.Coord;
+
+            static void ApplyNeighborRoads(GeneratorGrid grid, HexaCoord centerCoord, ref int targetCost, int ring, int deltaScore)
+            {
+                int bufferLength = centerCoord.GetRing(1, Span<HexaCoord>.Empty);
+
+                Span<HexaCoord> neighborCoords = stackalloc HexaCoord[bufferLength];
+                centerCoord.GetRing(1, neighborCoords);
+
+                for (int i = 0; i < bufferLength; i++)
+                {
+                    GeneratorCell? neighbor = grid.GetCell(neighborCoords[i]);
+                    if (neighbor is null ||
+                        !neighbor.HasRoad)
+                    {
+                        continue;
+                    }
+                    targetCost += deltaScore;
+                }
+            }
+            ApplyNeighborRoads(grid, nextCoord, ref cost, 1, -20);
+            ApplyNeighborRoads(grid, nextCoord, ref cost, 2, -5);
 
             return cost;
         }
 
         static int Heuristic(HexaCell goal, HexaCell next)
         {
-            int distance = HexaCoord.Distance(goal.Coord, next.Coord);
-            return distance;
+            return 0;
+            //int distance = HexaCoord.Distance(goal.Coord, next.Coord);
+            //distance *= 20;
+            //return distance;
         }
 
         public struct Settings

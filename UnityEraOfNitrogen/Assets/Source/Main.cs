@@ -80,11 +80,20 @@ namespace Jih.Unity.EraOfNitrogen
             world.Initialize();
 
             WorldMeshBuilder worldMeshBuilder = new(world);
-            var chunks = worldMeshBuilder.BuildLand();
-            List<GameObject> landObjs = worldMeshBuilder.Spawn(chunks);
 
-            string json = Infrastructure.Json.JsonSave.SerializeObject(world, typeof(World).Namespace);
-            System.IO.File.WriteAllText(@"F:\((Temp))\TestWorld.json", json);
+            var chunks = worldMeshBuilder.BuildLand();
+            _ = worldMeshBuilder.Spawn(chunks, null);
+
+            GameObject roadsRoot = new() { name = "Roads Root", };
+            roadsRoot.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+
+            var blocks = worldMeshBuilder.BuildRoads();
+            foreach (var pair in blocks)
+            {
+                _ = worldMeshBuilder.Spawn(pair, roadsRoot.transform);
+            }
+
+            _ = Infrastructure.Json.JsonSave.SerializeObject(world, typeof(World).Namespace);
         }
 
         void Update()

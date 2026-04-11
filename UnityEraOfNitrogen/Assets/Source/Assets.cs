@@ -24,7 +24,7 @@ namespace Jih.Unity.EraOfNitrogen
         [SerializeField] Color32 _grasslandColor = new(0x91, 0xB9, 0x5B, 0xFF);
         [SerializeField] Color32 _rainforestColor = new(0x3B, 0x5D, 0x38, 0xFF);
         [SerializeField] Color32 _tundraColor = new(0xD0, 0xD7, 0xD9, 0xFF);
-        [SerializeField] Color32 _steppColor = new(0xC4, 0xA4, 0x6B, 0xFF);
+        [SerializeField] Color32 _steppeColor = new(0xC4, 0xA4, 0x6B, 0xFF);
         [SerializeField] Color32 _desertColor = new(0xEB, 0xC0, 0x7A, 0xFF);
         [SerializeField] Color32 _snowColor = new(0xF2, 0xF2, 0xF2, 0xFF);
 
@@ -39,6 +39,9 @@ namespace Jih.Unity.EraOfNitrogen
         [SerializeField] Material? _oceanMaterial;
         public Material OceanMaterial => _oceanMaterial.ThrowIfNull(nameof(OceanMaterial));
 
+        [Header("Road")]
+        [SerializeField] RoadAssets[] _roads = Array.Empty<RoadAssets>();
+
         public Color32 GetColor(Biome biome)
         {
             return biome switch
@@ -46,7 +49,7 @@ namespace Jih.Unity.EraOfNitrogen
                 Biome.Grassland => _grasslandColor,
                 Biome.Rainforest => _rainforestColor,
                 Biome.Tundra => _tundraColor,
-                Biome.Steppe => _steppColor,
+                Biome.Steppe => _steppeColor,
                 Biome.Desert => _desertColor,
                 Biome.Snow => _snowColor,
                 _ => throw new NotImplementedException(),
@@ -58,9 +61,108 @@ namespace Jih.Unity.EraOfNitrogen
             return isNearOcean ? _nearOceanColor : _farOceanColor;
         }
 
+        public RoadAssets GetRoadAssets(RoadLevel level)
+        {
+            return _roads[level.ToIndex()];
+        }
+
         public Assets()
         {
             _instance = new SingletonStorage<Assets>(this);
+        }
+    }
+
+    [Serializable]
+    public class RoadAssets
+    {
+        [SerializeField] float _meshBaseZRotation = 0f;
+        public float MeshBaseZRotation => _meshBaseZRotation;
+        [SerializeField] Material? _material;
+        public Material Material => _material.ThrowIfNull(nameof(Material));
+        [SerializeField] Texture2D? _mainTexture;
+        public Texture2D MainTexture => _mainTexture.ThrowIfNull(nameof(MainTexture));
+
+        [Space(12f)]
+        [SerializeField] Mesh? _meshNone;
+        [SerializeField] Mesh? _mesh0;
+        [SerializeField] Mesh? _mesh01;
+        [SerializeField] Mesh? _mesh02;
+        [SerializeField] Mesh? _mesh03;
+        [SerializeField] Mesh? _mesh012;
+        [SerializeField] Mesh? _mesh013;
+        [SerializeField] Mesh? _mesh024;
+        [SerializeField] Mesh? _mesh035;
+        [SerializeField] Mesh? _mesh0123;
+        [SerializeField] Mesh? _mesh0234;
+        [SerializeField] Mesh? _mesh0235;
+        [SerializeField] Mesh? _mesh01234;
+        [SerializeField] Mesh? _mesh012345;
+
+        public Mesh GetMesh(RoadBranch branch)
+        {
+            Mesh? mesh;
+            if (branch == RoadBranch.None)
+            {
+                mesh = _meshNone;
+            }
+            else if (branch == RoadBranch.Branch0)
+            {
+                mesh = _mesh0;
+            }
+            else if (branch == RoadBranch.Branch01)
+            {
+                mesh = _mesh01;
+            }
+            else if (branch == RoadBranch.Branch02)
+            {
+                mesh = _mesh02;
+            }
+            else if (branch == RoadBranch.Branch03)
+            {
+                mesh = _mesh03;
+            }
+            else if (branch == RoadBranch.Branch012)
+            {
+                mesh = _mesh012;
+            }
+            else if (branch == RoadBranch.Branch013)
+            {
+                mesh = _mesh013;
+            }
+            else if (branch == RoadBranch.Branch024)
+            {
+                mesh = _mesh024;
+            }
+            else if (branch == RoadBranch.Branch035)
+            {
+                mesh = _mesh035;
+            }
+            else if (branch == RoadBranch.Branch0123)
+            {
+                mesh = _mesh0123;
+            }
+            else if (branch == RoadBranch.Branch0234)
+            {
+                mesh = _mesh0234;
+            }
+            else if (branch == RoadBranch.Branch0235)
+            {
+                mesh = _mesh0235;
+            }
+            else if (branch == RoadBranch.Branch01234)
+            {
+                mesh = _mesh01234;
+            }
+            else if (branch == RoadBranch.Branch012345)
+            {
+                mesh = _mesh012345;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(branch));
+            }
+
+            return mesh.ThrowIfNull("Mesh" + branch.ToString());
         }
     }
 }

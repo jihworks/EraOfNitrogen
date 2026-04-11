@@ -60,6 +60,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             Tile = tile;
         }
 
+        public new MapCell? GetNeighbor(HexaNeighborPosition position)
+        {
+            return (MapCell?)base.GetNeighbor(position);
+        }
+
         public new IEnumerable<MapCell> EnumerateNeighbors()
         {
             return base.EnumerateNeighbors().Cast<MapCell>();

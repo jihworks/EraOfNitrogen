@@ -12,6 +12,7 @@ using Jih.Unity.Infrastructure.Geometries;
 using Jih.Unity.Infrastructure.HexaGrid;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using static Jih.Unity.EraOfNitrogen.CoordinateSpaceEx;
@@ -88,34 +89,6 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return chunks;
         }
 
-        public List<GameObject> Spawn(IReadOnlyList<LandChunk> chunks)
-        {
-            Material landMaterial = Assets.LandMaterial;
-            Material[] materials = new Material[] { landMaterial, };
-
-            List<GameObject> meshObjs = new(chunks.Count);
-
-            foreach (var chunk in chunks)
-            {
-                string name = $"Land Mesh {chunk.ChunkX} x {chunk.ChunkY}";
-
-                Mesh mesh = chunk.MeshCollector.GetTrianglesMesh(true, true);
-                mesh.name = name;
-
-                GameObject meshObj = new() { name = name, };
-                meshObjs.Add(meshObj);
-
-                MeshFilter meshFilter = meshObj.AddComponent<MeshFilter>();
-                meshFilter.sharedMesh = mesh;
-
-                MeshRenderer meshRenderer = meshObj.AddComponent<MeshRenderer>();
-                meshRenderer.sharedMaterials = materials;
-                meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            }
-
-            return meshObjs;
-        }
-
         static void CollectLandChunk(Assets assets, in LandChunk chunk)
         {
             MeshCollector meshCollector = chunk.MeshCollector;
@@ -157,6 +130,155 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
+        public List<GameObject> Spawn(IReadOnlyList<LandChunk> chunks, Transform? parent)
+        {
+            Material landMaterial = Assets.LandMaterial;
+            Material[] materials = new Material[] { landMaterial, };
+
+            List<GameObject> meshObjs = new(chunks.Count);
+
+            foreach (var chunk in chunks)
+            {
+                string name = $"Land Mesh {chunk.ChunkX} x {chunk.ChunkY}";
+
+                Mesh mesh = chunk.MeshCollector.GetTrianglesMesh(true, true);
+                mesh.name = name;
+
+                GameObject meshObj = new() { name = name, };
+                meshObjs.Add(meshObj);
+
+                if (parent != null)
+                {
+                    meshObj.transform.SetParent(parent, false);
+                }
+
+                MeshFilter meshFilter = meshObj.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
+
+                MeshRenderer meshRenderer = meshObj.AddComponent<MeshRenderer>();
+                meshRenderer.sharedMaterials = materials;
+                meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            }
+
+            return meshObjs;
+        }
+
+        public Dictionary<Province, List<RoadBlock>> BuildRoads()
+        {
+            if (!World.IsInitialized)
+            {
+                throw new InvalidOperationException("초기화되지 않은 월드로부터 도로를 빌드할 수 없음.");
+            }
+
+            Dictionary<Province, List<RoadBlock>> result = new(World.Provinces.Count);
+
+            foreach (var province in World.Provinces)
+            {
+                List<RoadBlock> roadBlocks = new(province.Tiles.Count);
+                result.Add(province, roadBlocks);
+
+                foreach (var tile in province.Tiles)
+                {
+                    if (!tile.HasRoad)
+                    {
+                        continue;
+                    }
+
+                    if (!tile.IsInitialized)
+                    {
+                        throw new InvalidOperationException("초기화되지 않은 타일로부터 도로를 빌드할 수 없음.");
+                    }
+
+                    RoadBranch branch = RoadBranch.None;
+                    for (int b = 0; b < RoadBranch.MaxCount; b++)
+                    {
+                        HexaNeighborPosition position = (HexaNeighborPosition)b;
+                        MapCell? neighbor = tile.Cell.GetNeighbor(position);
+                        if (neighbor is null ||
+                            !neighbor.Tile.HasRoad)
+                        {
+                            continue;
+                        }
+                        branch[b] = true;
+                    }
+
+                    if (branch == RoadBranch.None)
+                    {
+                        roadBlocks.Add(new RoadBlock(province, tile, tile.Cell, branch, branch, 0));
+                        continue;
+                    }
+
+                    int cwShiftCount = -1;
+                    RoadBranch meshBranch = branch;
+                    for (int s = 0; s < RoadBranch.MaxCount; s++)
+                    {
+                        if (RoadBranch.Branches.Contains(meshBranch))
+                        {
+                            cwShiftCount = s;
+                            break;
+                        }
+
+                        meshBranch >>= 1;
+                    }
+                    if (cwShiftCount < 0)
+                    {
+                        throw new InvalidOperationException($"도로 브랜치 {branch} 에 대한 메시 브랜치를 찾지 못함.");
+                    }
+
+                    roadBlocks.Add(new RoadBlock(province, tile, tile.Cell, branch, meshBranch, cwShiftCount));
+                }
+            }
+
+            return result;
+        }
+
+        public List<GameObject> Spawn(KeyValuePair<Province, List<RoadBlock>> roadBlocks, Transform? parent)
+        {
+            RoadAssets assets = Assets.GetRoadAssets(RoadLevel.Dirt/*TODO: 테스트 용 도로 레벨.*/);
+
+            Material material = assets.Material;
+            Material[] materials = new Material[] { material, };
+
+            Texture2D mainTexture = assets.MainTexture;
+
+            MaterialPropertyBlock propertyBlock = new();
+            propertyBlock.SetTexture(ShaderIds.MainTexure, mainTexture);
+
+            List<GameObject> result = new(roadBlocks.Value.Count);
+            foreach (var roadBlock in roadBlocks.Value)
+            {
+                Mesh mesh = assets.GetMesh(roadBlock.MeshBranch);
+
+                float zRotation = assets.MeshBaseZRotation;
+                zRotation += roadBlock.CwShiftCount * -60f;
+
+                Quaternion rotation = Quaternion.AngleAxis(zRotation, Vector3.up);
+
+                HexaCoord coord = roadBlock.Cell.Coord;
+                Vector2 screenLocation = HexaToScreen(coord);
+                Vector3 unityLocation = ScreenToUnity(screenLocation);
+
+                GameObject meshObj = new() { name = "Road Block " + coord, };
+                result.Add(meshObj);
+
+                if (parent != null)
+                {
+                    meshObj.transform.SetParent(parent, false);
+                }
+                meshObj.transform.SetLocalPositionAndRotation(unityLocation, rotation);
+
+                MeshFilter meshFilter = meshObj.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
+
+                MeshRenderer meshRenderer = meshObj.AddComponent<MeshRenderer>();
+                meshRenderer.sharedMaterials = materials;
+                meshRenderer.SetPropertyBlock(propertyBlock);
+                meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            }
+
+            return result;
+        }
+
         public readonly struct LandChunk
         {
             public readonly int ChunkX, ChunkY;
@@ -172,6 +294,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                 GridY = gridY;
                 Cells = cells;
                 MeshCollector = meshCollector;
+            }
+        }
+
+        public readonly struct RoadBlock
+        {
+            public readonly Province Province;
+            public readonly Tile Tile;
+            public readonly MapCell Cell;
+            public readonly RoadBranch Branch;
+            public readonly RoadBranch MeshBranch;
+            public readonly int CwShiftCount;
+
+            public RoadBlock(Province province, Tile tile, MapCell cell, RoadBranch branch, RoadBranch meshBranch, int cwShiftCount)
+            {
+                Province = province;
+                Tile = tile;
+                Cell = cell;
+                Branch = branch;
+                MeshBranch = meshBranch;
+                CwShiftCount = cwShiftCount;
             }
         }
 

@@ -739,7 +739,7 @@ MonoBehaviour:
   _tundraColor:
     serializedVersion: 2
     rgba: 4292466640
-  _steppColor:
+  _steppeColor:
     serializedVersion: 2
     rgba: 4285244612
   _desertColor:
@@ -756,6 +756,24 @@ MonoBehaviour:
     rgba: 4285745708
   _landMaterial: {fileID: 2100000, guid: 5677be287c9e01f448af08d7c7895a9c, type: 2}
   _oceanMaterial: {fileID: 2100000, guid: 875613e64b374b44aa4b6223fa622eda, type: 2}
+  _roads:
+  - _meshBaseZRotation: -60
+    _material: {fileID: 2100000, guid: bb8a7a56db5eb4d40952b434926de60b, type: 2}
+    _mainTexture: {fileID: 2800000, guid: 4ad23af22b943dc4b8c6476b29ada12f, type: 3}
+    _meshNone: {fileID: -7068019085461396189, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh0: {fileID: 7894538370314477616, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh01: {fileID: -1970231033789659823, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh02: {fileID: 5942900762583594702, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh03: {fileID: 1042518247935800725, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh012: {fileID: 6362241775971445087, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh013: {fileID: -784237160619060843, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh024: {fileID: 8167758741316939710, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh035: {fileID: -7956636681652778712, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh0123: {fileID: 4040281723040024215, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh0234: {fileID: -6924408826424381817, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh0235: {fileID: -8179146239772441415, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh01234: {fileID: -4456645609485094479, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
+    _mesh012345: {fileID: 1265714768281519391, guid: 3a78f9d050b0dd6458bc6bf5e095d49a, type: 3}
 --- !u!4 &1787021443
 Transform:
   m_ObjectHideFlags: 0

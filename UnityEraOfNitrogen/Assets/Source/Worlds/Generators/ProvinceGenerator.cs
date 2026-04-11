@@ -49,6 +49,8 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         {
             List<GeneratorCell> result = new();
 
+            int maxRetryCount = landCells.Count;
+
             List<GeneratorCell> candidates = new(landCells.Count);
             // 해안선은 도시 후보에서 제외.
             candidates.AddRange(landCells.Where(l => !l.IsCoastlineLand));
@@ -56,7 +58,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             while (candidates.Count > 0 && result.Count < maxProvinceCountSetting)
             {
                 bool anyFound = false;
-                for (int retryCount = 0; retryCount < landCells.Count; retryCount++)
+                for (int retryCount = 0; retryCount < maxRetryCount; retryCount++)
                 {
                     int pickedIndex = random.NextInt32(0, candidates.Count);
                     GeneratorCell pickedCell = candidates[pickedIndex];
@@ -66,6 +68,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                     {
                         result.Add(pickedCell);
                         anyFound = true;
+                        break;
+                    }
+
+                    if (candidates.Count <= 0)
+                    {
                         break;
                     }
                 }
@@ -100,14 +107,17 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         {
             List<GeneratorProvince> result = new(cityCells.Count);
 
+            uint provinceId = 1;
             foreach (var cityCell in cityCells)
             {
-                GeneratorProvince province = new(cityCell);
+                GeneratorProvince province = new(provinceId, cityCell);
 
                 province.Cells.Add(cityCell);
                 cityCell.Province = province;
 
                 result.Add(province);
+
+                provinceId++;
             }
 
             // 도시는 제외. 이미 처리됨.
@@ -118,6 +128,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
                 expandTarget.Province = province;
                 province.Cells.Add(expandTarget);
+            }
+
+            foreach (var province in result)
+            {
+                HashSet<GeneratorProvince> adjacentProvinces = new(result.Count);
+
+                foreach (var cell in province.Cells)
+                {
+                    foreach (var neighbor in cell.EnumerateNeighbors())
+                    {
+                        GeneratorProvince? neighborProvince = neighbor.Province;
+                        if (neighborProvince is null || neighborProvince == province)
+                        {
+                            continue;
+                        }
+                        adjacentProvinces.Add(neighborProvince);
+                    }
+                }
+
+                province.AdjacentProvinces.AddRange(adjacentProvinces);
             }
 
             return result;
@@ -145,7 +175,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
         public struct Settings
         {
-            public static Settings Default => new(4, int.MaxValue);
+            public static Settings Default => new(4, 128);
 
             public int MinCityDistance;
             public int MaxProvinceCount;

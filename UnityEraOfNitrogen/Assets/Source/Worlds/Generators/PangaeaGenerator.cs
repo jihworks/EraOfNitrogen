@@ -21,6 +21,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         readonly RandomStream _random;
 
         public List<GeneratorCell>? ResultLandCells { get; private set; }
+        public List<GeneratorCell>? ResultOceanCells { get; private set; }
 
         public PangaeaGenerator(Settings settings, GeneratorGrid grid, RandomStream random)
         {
@@ -36,22 +37,34 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             RemoveInlandWater(landCells, _grid);
 
             List<GeneratorCell> landCellsList = new(landCells);
+            List<GeneratorCell> oceanCells = new(_grid.Width * _grid.Height - landCells.Count);
 
             foreach (var cell in _grid.EnumerateCells())
             {
                 cell.IsLand = false;
                 cell.IsCoastlineLand = false;
-            }
-            foreach (var landCell in landCellsList)
-            {
-                landCell.IsLand = true;
+                cell.IsNearOcean = false;
+
+                if (landCells.Contains(cell))
+                {
+                    cell.IsLand = true;
+                }
+                else
+                {
+                    oceanCells.Add(cell);
+                }
             }
             foreach (var landCell in landCellsList)
             {
                 landCell.IsCoastlineLand = landCell.EnumerateNeighbors().Any(n => !n.IsLand);
             }
+            foreach (var oceanCell in oceanCells)
+            {
+                oceanCell.IsNearOcean = oceanCell.EnumerateNeighbors().Any(n => n.IsLand);
+            }
 
             ResultLandCells = landCellsList;
+            ResultOceanCells = oceanCells;
         }
 
         static HashSet<GeneratorCell> GenerateLandmass(RandomStream random, GeneratorGrid mapGrid, double landRatioSetting)

@@ -18,51 +18,86 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
     {
         readonly Settings _settings;
         readonly GeneratorGrid _grid;
-        readonly IReadOnlyList<GeneratorCell> _cityCells;
+        readonly IReadOnlyList<GeneratorProvince> _provinces;
 
-        public RoadNetworkGenerator(Settings settings, GeneratorGrid grid, IReadOnlyList<GeneratorCell> cityCells)
+        public RoadNetworkGenerator(Settings settings, GeneratorGrid grid, IReadOnlyList<GeneratorProvince> provinces)
         {
             _settings = settings;
             _grid = grid;
-            _cityCells = cityCells;
+            _provinces = provinces;
         }
 
         public void Execute()
         {
-            foreach (var cell in _cityCells)
+            foreach (var province in _provinces)
             {
-                cell.HasRoad = true;
+                province.CityCell.HasRoad = true;
             }
 
-            Connect(_grid, _cityCells);
+            Connect(_grid, _provinces);
         }
 
-        static void Connect(GeneratorGrid mapGrid, IReadOnlyList<GeneratorCell> cityCells)
+        static void Connect(GeneratorGrid mapGrid, IReadOnlyList<GeneratorProvince> provinces)
         {
-            Queue<GeneratorCell> startings = new(cityCells);
-            while (startings.TryDequeue(out GeneratorCell start))
+            if (provinces.Count < 2)
             {
-                HexaCoord startCoord = start.Coord;
+                return;
+            }
 
-                List<(GeneratorCell Cell, int Distance)> targets = new(cityCells.Count);
-                targets.AddRange(cityCells.Where(c => c != start).Select(c => (c, HexaCoord.Distance(c.Coord, startCoord))));
-                targets.Sort((l, r) => l.Distance.CompareTo(r.Distance));
+            HashSet<ProvincePair> connected = new(provinces.Sum(p => p.AdjacentProvinces.Count));
 
-                HexaPathResult result = new();
-                foreach (var (goal, _) in targets)
+            HexaPathResult result = new();
+            foreach (var province in provinces)
+            {
+                foreach (var adjacent in province.AdjacentProvinces)
                 {
+                    ProvincePair pair = new(province.Id, adjacent.Id);
+                    if (connected.Contains(pair))
+                    {
+                        continue;
+                    }
+
+                    GeneratorCell start = province.CityCell, goal = adjacent.CityCell;
                     mapGrid.FindPath(start, goal, result, Access, Cost, Heuristic);
 
                     if (!result.IsSucceed)
                     {
-                        throw new InvalidOperationException($"Failed to connect road from {start.Coord} to {goal.Coord}.");
+                        throw new InvalidOperationException($"{start.Coord}로부터 {goal.Coord}까지 도로를 연결하지 못함.");
                     }
 
                     foreach (var roadCell in result.ResultPath.Cast<GeneratorCell>())
                     {
                         roadCell.HasRoad = true;
                     }
+
+                    connected.Add(pair);
                 }
+            }
+        }
+
+        readonly struct ProvincePair : IEquatable<ProvincePair>
+        {
+            public readonly uint Id0, Id1;
+
+            public ProvincePair(uint id0, uint id1)
+            {
+                Id0 = Math.Min(id0, id1);
+                Id1 = Math.Max(id0, id1);
+            }
+
+            public readonly override bool Equals(object? obj)
+            {
+                return obj is ProvincePair pair && Equals(pair);
+            }
+            public readonly bool Equals(ProvincePair other)
+            {
+                return Id0 == other.Id0 &&
+                       Id1 == other.Id1;
+            }
+
+            public readonly override int GetHashCode()
+            {
+                return HashCode.Combine(Id0, Id1);
             }
         }
 

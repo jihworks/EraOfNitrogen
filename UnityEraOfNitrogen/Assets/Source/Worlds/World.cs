@@ -31,22 +31,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonProperty(nameof(Provinces))] readonly List<Province> _provinces;
         [JsonIgnore] public IReadOnlyList<Province> Provinces => _provinces;
 
-        [JsonIgnore] public bool IsInitialized { get; private set; }
+        [JsonProperty(nameof(OceanTiles))] readonly List<Tile> _oceanTiles;
+        [JsonIgnore] public IReadOnlyList<Tile>? OceanTiles => _oceanTiles;
 
-        [JsonIgnore, MemberNotNullWhen(true, nameof(IsInitialized))] public RandomStream? RandomStream { get; private set; }
+        [JsonIgnore, MemberNotNullWhen(true,
+            nameof(RandomStream),
+            nameof(MapGrid))]
+        public bool IsInitialized { get; private set; }
 
-        [JsonIgnore] List<Tile>? _oceanTiles;
-        [JsonIgnore, MemberNotNullWhen(true, nameof(IsInitialized))] public IReadOnlyList<Tile>? OceanTiles => _oceanTiles;
+        [JsonIgnore] public RandomStream? RandomStream { get; private set; }
 
-        [JsonIgnore, MemberNotNullWhen(true, nameof(IsInitialized))] public MapGrid? MapGrid { get; private set; }
+        [JsonIgnore] public MapGrid? MapGrid { get; private set; }
 
         [JsonConstructor]
         private World()
         {
             _provinces = null!;
+            _oceanTiles = null!;
         }
 
-        public World(GeneratorGrid generatorGrid, int mapSeed, IReadOnlyList<GeneratorProvince> generatorProvinces)
+        public World(GeneratorGrid generatorGrid, int mapSeed, IReadOnlyList<GeneratorProvince> generatorProvinces, IReadOnlyList<GeneratorCell> generatorOceanCells)
         {
             Width = generatorGrid.Width;
             Height = generatorGrid.Height;
@@ -54,11 +58,17 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             RandomPosition = 0;
 
             _provinces = new List<Province>(generatorProvinces.Count);
-
             foreach (var generatorProvince in generatorProvinces)
             {
                 Province province = new(generatorProvince);
                 _provinces.Add(province);
+            }
+
+            _oceanTiles = new List<Tile>(generatorOceanCells.Count);
+            foreach (var generatorCell in generatorOceanCells)
+            {
+                Tile oceanTile = new(generatorCell);
+                _oceanTiles.Add(oceanTile);
             }
         }
 
@@ -74,8 +84,16 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
                 Position = RandomPosition,
             };
 
+            Dictionary<uint, Province> provinceMap = new(_provinces.Count);
+            foreach (var province in _provinces)
+            {
+                if (!provinceMap.TryAdd(province.Id, province))
+                {
+                    throw new InvalidOperationException($"프로빈스 ID {province.Id} 가 중복됨.");
+                }
+            }
+
             Tile[,] tiles = new Tile[Height, Width];
-            int provinceTileCount = 0;
             foreach (var province in _provinces)
             {
                 foreach (var provinceTile in province.Tiles)
@@ -90,25 +108,20 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
                     }
 
                     tile = provinceTile;
-                    provinceTileCount++;
                 }
             }
-            _oceanTiles = new(Width * Height - provinceTileCount);
-            for (int y = 0; y < Height; y++)
+            foreach (var oceanTile in _oceanTiles)
             {
-                for (int x = 0; x < Width; x++)
+                HexaCoord coord = oceanTile.Coord;
+                HexaIndex index = (HexaIndex)coord;
+
+                ref Tile tile = ref tiles[index.Y, index.X];
+                if (tile is not null)
                 {
-                    ref Tile tile = ref tiles[y, x];
-                    if (tile is not null)
-                    {
-                        continue;
-                    }
-
-                    Tile oceanTile = new((HexaCoord)new HexaIndex(x, y), false);
-                    _oceanTiles.Add(oceanTile);
-
-                    tile = oceanTile;
+                    throw new InvalidOperationException($"{coord}에서 바다 타일이 중복됨.");
                 }
+
+                tile = oceanTile;
             }
 
             MapGrid = new MapGrid(Width, Height, tiles);
@@ -117,12 +130,14 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             {
                 foreach (var provinceTile in province.Tiles)
                 {
-                    provinceTile.Initialize(province, MapGrid[(HexaIndex)(HexaCoord)provinceTile.Coord]);
+                    provinceTile.Initialize(this, province, MapGrid[(HexaIndex)(HexaCoord)provinceTile.Coord]);
                 }
+
+                province.Initialize(this, provinceMap);
             }
             foreach (var oceanTile in _oceanTiles)
             {
-                oceanTile.Initialize(null, MapGrid[(HexaIndex)(HexaCoord)oceanTile.Coord]);
+                oceanTile.Initialize(this, null, MapGrid[(HexaIndex)(HexaCoord)oceanTile.Coord]);
             }
 
             IsInitialized = true;

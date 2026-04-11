@@ -21,32 +21,61 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         {
             RandomStream random = new();
 
-            GeneratorGrid grid = new(128, 128);
+            UnityEngine.Debug.Log("== 월드 생성 시작");
+
+            System.Diagnostics.Stopwatch stopwatch = new();
+            stopwatch.Start();
+
+            GeneratorGrid grid = new(128, 64);
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"그리드 생성: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
 
             PangaeaGenerator pangaeaGenerator = new(PangaeaGenerator.Settings.Default, grid, random);
             pangaeaGenerator.Execute();
-            if (pangaeaGenerator.ResultLandCells is null)
+            if (pangaeaGenerator.ResultLandCells is null ||
+                pangaeaGenerator.ResultOceanCells is null)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("판게아 생성 실패.");
             }
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"판게아 생성: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
 
             List<GeneratorCell> landCells = pangaeaGenerator.ResultLandCells;
+            List<GeneratorCell> oceanCells = pangaeaGenerator.ResultOceanCells;
 
             ProvinceGenerator provinceGenerator = new(ProvinceGenerator.Settings.Default, random, landCells);
             provinceGenerator.Execute();
             if (provinceGenerator.ResultCityCells is null ||
                 provinceGenerator.ResultProvinces is null)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("프로빈스 생성 실패.");
             }
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"프로빈스 생성: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
 
             List<GeneratorCell> cityCells = provinceGenerator.ResultCityCells;
-            List<GeneratorProvince> provinces = provinceGenerator.ResultProvinces; 
+            List<GeneratorProvince> provinces = provinceGenerator.ResultProvinces;
 
-            RoadNetworkGenerator roadNetworkGenerator = new(RoadNetworkGenerator.Settings.Default, grid, cityCells);
+            BiomeGenerator biomeGenerator = new(BiomeGenerator.Settings.Default, random, provinces);
+            biomeGenerator.Execute();
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"바이옴 생성: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
+
+            RoadNetworkGenerator roadNetworkGenerator = new(RoadNetworkGenerator.Settings.Default, grid, provinces);
             roadNetworkGenerator.Execute();
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"도로 생성: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
 
-            ResultWorld = new World(grid, random.Seed, provinces);
+            ResultWorld = new World(grid, random.Seed, provinces, oceanCells);
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"월드 생성: {stopwatch.ElapsedMilliseconds}ms");
+
+            UnityEngine.Debug.Log("== 월드 생성 완료");
         }
     }
 }

@@ -11,30 +11,60 @@ using Jih.Unity.EraOfNitrogen.Worlds.Generators;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Jih.Unity.EraOfNitrogen.Worlds
 {
     [JsonObject]
     public class Province
     {
+        /// <summary>
+        /// 동일 월드 내 프로빈스들 사이에서 유일한 값.
+        /// </summary>
+        [JsonProperty] public uint Id { get; private set; }
+
+        [JsonProperty] public Biome Biome { get; private set; }
+
         [JsonProperty] public Tile CityTile { get; private set; }
 
         [JsonProperty(nameof(Tiles))] readonly List<Tile> _tiles;
+        /// <summary>
+        /// <see cref="CityTile"/> 포함.
+        /// </summary>
         [JsonIgnore] public IReadOnlyList<Tile> Tiles => _tiles;
+
+        [JsonProperty(nameof(AdjacentProvinceIds))] readonly List<uint> _adjacentProvinceIds;
+        [JsonIgnore] public IReadOnlyList<uint> AdjacentProvinceIds => _adjacentProvinceIds;
 
         [JsonProperty(nameof(Citizens))] readonly List<Citizen> _citizens;
         [JsonIgnore] public IReadOnlyList<Citizen> Citizens => _citizens;
+
+        [JsonIgnore, MemberNotNullWhen(true,
+            nameof(World),
+            nameof(_adjacentProvinces), nameof(AdjacentProvinces))]
+        public bool IsInitialized { get; private set; }
+
+        [JsonIgnore] public World? World { get; private set; }
+
+        [JsonIgnore] List<Province>? _adjacentProvinces;
+        [JsonIgnore] public IReadOnlyList<Province>? AdjacentProvinces => _adjacentProvinces;
 
         [JsonConstructor]
         private Province()
         {
             CityTile = null!;
             _tiles = null!;
+            _adjacentProvinceIds = null!;
             _citizens = null!;
         }
 
         public Province(GeneratorProvince generatorProvince)
         {
+            Id = generatorProvince.Id;
+
+            Biome = generatorProvince.Biome;
+
             Tile? cityTile = null;
 
             _tiles = new(generatorProvince.Cells.Count);
@@ -51,7 +81,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
 
             CityTile = cityTile ?? throw new InvalidOperationException("도시 셀이 프로빈스 셀 리스트에 없음.");
 
+            List<GeneratorProvince> adjacentProvinces = generatorProvince.AdjacentProvinces;
+            _adjacentProvinceIds = new(adjacentProvinces.Count);
+            _adjacentProvinceIds.AddRange(adjacentProvinces.Select(p => p.Id));
+
             _citizens = new List<Citizen>();
+        }
+
+        public void Initialize(World world, IReadOnlyDictionary<uint, Province> provinceMap)
+        {
+            if (IsInitialized)
+            {
+                return;
+            }
+
+            World = world;
+
+            _adjacentProvinces = new List<Province>(_adjacentProvinceIds.Count);
+            _adjacentProvinces.AddRange(_adjacentProvinceIds.Select(id => provinceMap[id]));
+
+            IsInitialized = true;
         }
     }
 }

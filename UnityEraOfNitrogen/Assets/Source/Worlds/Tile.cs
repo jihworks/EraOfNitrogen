@@ -28,12 +28,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         /// 연접한 셀 중 하나라도 바다면 해안선.
         /// </summary>
         [JsonProperty] public bool IsCoastlineLand { get; private set; }
+        /// <summary>
+        /// 연접한 셀 중 하나라도 땅이면 근해.
+        /// </summary>
+        [JsonProperty] public bool IsNearOcean { get; private set; }
+        /// <summary>
+        /// 초기 생성된 도로가 존재하는지 여부.
+        /// </summary>
         [JsonProperty] public bool HasRoad { get; private set; }
 
-        [JsonIgnore] public bool IsInitialized { get; private set; }
+        [JsonIgnore, MemberNotNullWhen(true,
+            nameof(World),
+            nameof(Cell))]
+        public bool IsInitialized { get; private set; }
 
+        [JsonIgnore] public World? World { get; private set; }
+        /// <summary>
+        /// 바다인 경우 <c>null</c>.
+        /// </summary>
         [JsonIgnore] public Province? Province { get; private set; }
-        [JsonIgnore, MemberNotNullWhen(true, nameof(IsInitialized))] public MapCell? Cell { get; private set; }
+        [JsonIgnore] public MapCell? Cell { get; private set; }
 
         [JsonConstructor]
         private Tile()
@@ -45,21 +59,18 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             Coord = cell.Coord;
             IsLand = cell.IsLand;
             IsCoastlineLand = cell.IsCoastlineLand;
+            IsNearOcean = cell.IsNearOcean;
             HasRoad = cell.HasRoad;
         }
 
-        public Tile(TileCoord coord, bool isLand)
-        {
-            Coord = coord;
-            IsLand = isLand;
-        }
-
-        public void Initialize(Province? province, MapCell cell)
+        public void Initialize(World world, Province? province, MapCell cell)
         {
             if (IsInitialized)
             {
                 return;
             }
+
+            World = world;
 
             if (province is not null && !IsLand)
             {

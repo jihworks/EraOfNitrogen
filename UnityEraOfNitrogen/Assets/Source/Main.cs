@@ -7,8 +7,12 @@
 
 #nullable enable
 
+using Jih.Unity.EraOfNitrogen.Worlds;
+using Jih.Unity.EraOfNitrogen.Worlds.Generators;
+using Jih.Unity.EraOfNitrogen.Worlds.Runtime;
 using Jih.Unity.Infrastructure;
 using Jih.Unity.Infrastructure.Runtime;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem.UI;
 
@@ -63,6 +67,24 @@ namespace Jih.Unity.EraOfNitrogen
             InputFrameStack.Push(new InputFrame(this, ui: false, player: false));
             CursorFrameStack.Push(new CursorFrame(this, lockMode: CursorLockMode.None, cursorVisible: true));
             TimeFrameStack.Push(new TimeFrame(this, timeScale: 1f));
+
+            WorldGenerator worldGenerator = new();
+            worldGenerator.Execute();
+
+            World? world = worldGenerator.ResultWorld;
+            if (world is null)
+            {
+                Debug.LogError("Failed to generate world.");
+                return;
+            }
+            world.Initialize();
+
+            WorldMeshBuilder worldMeshBuilder = new(world);
+            var chunks = worldMeshBuilder.BuildLand();
+            List<GameObject> landObjs = worldMeshBuilder.Spawn(chunks);
+
+            string json = Infrastructure.Json.JsonSave.SerializeObject(world, typeof(World).Namespace);
+            System.IO.File.WriteAllText(@"F:\((Temp))\TestWorld.json", json);
         }
 
         void Update()

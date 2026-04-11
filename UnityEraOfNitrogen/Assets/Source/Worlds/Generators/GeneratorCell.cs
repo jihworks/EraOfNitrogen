@@ -23,7 +23,14 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         /// 연접한 셀 중 하나라도 바다면 해안선.
         /// </summary>
         public bool IsCoastlineLand { get; set; }
+        /// <summary>
+        /// 연접한 셀 중 하나라도 땅이면 근해.
+        /// </summary>
+        public bool IsNearOcean { get; set; }
 
+        /// <summary>
+        /// 초기 생성된 도로가 존재하는지 여부.
+        /// </summary>
         public bool HasRoad { get; set; }
 
         public GeneratorProvince? Province { get; set; }

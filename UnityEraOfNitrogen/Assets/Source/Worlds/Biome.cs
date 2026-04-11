@@ -7,19 +7,23 @@
 
 #nullable enable
 
-using Jih.Unity.Infrastructure.Runtime;
-using UnityEngine;
-
-namespace Jih.Unity.EraOfNitrogen
+namespace Jih.Unity.EraOfNitrogen.Worlds
 {
-    public class Rules : MonoBehaviour
+    public enum Biome
     {
-        static SingletonStorage<Rules> _instance;
-        public static Rules Instance => _instance.Get();
+        Grassland = 1,
+        Rainforest,
+        Tundra,
+        Steppe,
+        Desert,
+        Snow,
+    }
 
-        public Rules()
+    public static class BiomeEx
+    {
+        public static int ToIndex(this Biome biome)
         {
-            _instance = new SingletonStorage<Rules>(this);
+            return (int)biome - 1;
         }
     }
 }

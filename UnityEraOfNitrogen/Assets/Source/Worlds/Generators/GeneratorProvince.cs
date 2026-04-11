@@ -13,11 +13,24 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 {
     public class GeneratorProvince
     {
+        /// <summary>
+        /// 동일 월드 내 프로빈스들 사이에서 유일한 값.
+        /// </summary>
+        public uint Id { get; }
+
         public GeneratorCell CityCell { get; }
+        /// <summary>
+        /// <see cref="CityCell"/> 포함.
+        /// </summary>
         public List<GeneratorCell> Cells { get; } = new();
 
-        public GeneratorProvince(GeneratorCell cityCell)
+        public List<GeneratorProvince> AdjacentProvinces { get; } = new();
+
+        public Biome Biome { get; set; }
+
+        public GeneratorProvince(uint id, GeneratorCell cityCell)
         {
+            Id = id;
             CityCell = cityCell;
         }
     }

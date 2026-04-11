@@ -121,10 +121,10 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
             static void ApplyNeighborRoads(GeneratorGrid grid, HexaCoord centerCoord, ref int targetCost, int ring, int deltaScore)
             {
-                int bufferLength = centerCoord.GetRing(1, Span<HexaCoord>.Empty);
+                int bufferLength = centerCoord.GetRing(ring, Span<HexaCoord>.Empty);
 
                 Span<HexaCoord> neighborCoords = stackalloc HexaCoord[bufferLength];
-                centerCoord.GetRing(1, neighborCoords);
+                centerCoord.GetRing(ring, neighborCoords);
 
                 for (int i = 0; i < bufferLength; i++)
                 {

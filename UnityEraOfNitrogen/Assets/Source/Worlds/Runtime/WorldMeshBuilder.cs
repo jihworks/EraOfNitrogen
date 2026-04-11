@@ -250,6 +250,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                 Mesh mesh = assets.GetMesh(roadBlock.MeshBranch);
 
                 float zRotation = assets.MeshBaseZRotation;
+                // CW로 회전하여 찾았으므로, CCW로 회전해야 함.
                 zRotation += roadBlock.CwShiftCount * -60f;
 
                 Quaternion rotation = Quaternion.AngleAxis(zRotation, Vector3.up);

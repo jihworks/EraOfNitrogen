@@ -14,8 +14,17 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         readonly float F0, F1, F2, F3;
         readonly float B0, B1, B2, B3;
 
-        /// <param name="origin">Commonly <see cref="Vector2.zero"/>.</param>
-        /// <param name="radius">Commonly <see cref="Vector2.one"/>.</param>
+        /// <summary>
+        /// Horizontal distance from center of a cell to another center of a cell.
+        /// </summary>
+        public float HorizontalSpacing => Radius.x * F0;
+        /// <summary>
+        /// Vertical distance from center of a cell to another center of a cell.
+        /// </summary>
+        public float VerticalSpacing => Radius.y * F3;
+
+        /// <param name="origin">A coordinate for center of the origin cell in screen space. Commonly <see cref="Vector2.zero"/>.</param>
+        /// <param name="radius">Radius of circumcircle of a cell. Commonly <see cref="Vector2.one"/>.</param>
         public HexaOrientation(Vector2 origin, Vector2 radius)
             : this(origin, radius,
                   // Pointy-topped hexagon orientation.

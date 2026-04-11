@@ -17,14 +17,14 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         /// <summary>
         /// Horizontal distance from center of a cell to another center of a cell.
         /// </summary>
-        public float HorizontalSpacing => Radius.x * F0;
+        public float ScreenHorizontalSpacing => Radius.x * F0;
         /// <summary>
         /// Vertical distance from center of a cell to another center of a cell.
         /// </summary>
-        public float VerticalSpacing => Radius.y * F3;
+        public float ScreenVerticalSpacing => Radius.y * F3;
 
         /// <param name="origin">A coordinate for center of the origin cell in screen space. Commonly <see cref="Vector2.zero"/>.</param>
-        /// <param name="radius">Radius of circumcircle of a cell. Commonly <see cref="Vector2.one"/>.</param>
+        /// <param name="radius">Radius of circumcircle of a cell in screen space. Commonly <see cref="Vector2.one"/>.</param>
         public HexaOrientation(Vector2 origin, Vector2 radius)
             : this(origin, radius,
                   // Pointy-topped hexagon orientation.
@@ -59,6 +59,13 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             float a = B0 * pt.x + B1 * pt.y;
             float b = B2 * pt.x + B3 * pt.y;
             return new HexaCoordF(a, b, -a - b);
+        }
+
+        public Vector2 GetScreenVertexOffset(HexaVertexPosition position)
+        {
+            float angle = position.GetRadiusDegrees();
+            Vector2 radiusVector = MathEx.RadiusVector(angle.ToRadians());
+            return new Vector2(radiusVector.x * Radius.x, radiusVector.y * Radius.y);
         }
     }
 }

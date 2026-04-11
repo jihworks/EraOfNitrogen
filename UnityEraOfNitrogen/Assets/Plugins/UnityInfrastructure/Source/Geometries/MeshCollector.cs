@@ -869,6 +869,40 @@ namespace Jih.Unity.Infrastructure.Geometries
         public Vector4 Tangent;
         public IReadOnlyList<BoneWeight1>? BoneWeightList;
 
+        public VertexData(Vector3 position) : this()
+        {
+            Position = position;
+        }
+        public VertexData(Vector3 position, Color color) : this()
+        {
+            Position = position;
+            Color = color;
+        }
+        public VertexData(Vector3 position, Vector2 uv0) : this()
+        {
+            Position = position;
+            UV0 = uv0;
+        }
+        public VertexData(Vector3 position, Color color, Vector2 uv0) : this()
+        {
+            Position = position;
+            Color = color;
+            UV0 = uv0;
+        }
+        public VertexData(Vector3 position, Vector2 uv0, Vector3 normal) : this()
+        {
+            Position = position;
+            UV0 = uv0;
+            Normal = normal;
+        }
+        public VertexData(Vector3 position, Color color, Vector2 uv0, Vector3 normal) : this()
+        {
+            Position = position;
+            Color = color;
+            UV0 = uv0;
+            Normal = normal;
+        }
+
         public readonly Vector2 GetUV(int i)
         {
             return i switch

@@ -249,23 +249,10 @@ namespace Jih.Unity.Infrastructure.Rendering
 
             transformsBuffer?.Release();
 
-            int bufferLength = GetBufferLength(targetCount, increaseLength);
-            transformsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bufferLength, 64);
+            int bufferLength = targetCount.CeilToMultiple(increaseLength);
+            transformsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bufferLength, StructureSize);
             newlyAllocated = true;
             return transformsBuffer;
-        }
-
-        static int GetBufferLength(int targetLength, int increaseLength)
-        {
-            int div = Math.DivRem(targetLength, increaseLength, out int remain);
-
-            int result = div * increaseLength;
-            if (remain > 0)
-            {
-                result += increaseLength;
-            }
-
-            return result;
         }
 
         public class TransformsList : IList<Matrix4x4>, IReadOnlyList<Matrix4x4>
@@ -353,5 +340,8 @@ namespace Jih.Unity.Infrastructure.Rendering
                 return InnerList.GetEnumerator();
             }
         }
+
+        // One Matrix4x4
+        const int StructureSize = sizeof(float) * 16;
     }
 }

@@ -447,6 +447,148 @@ namespace Jih.Unity.Infrastructure
         }
 
         /// <summary>
+        /// Divides two integers and rounds up the result.
+        /// </summary>
+        /// <param name="value">The dividend (must be non-negative).</param>
+        /// <param name="divisor">The divisor (must be greater than 0).</param>
+        /// <returns>The quotient rounded up to the next integer.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="divisor"/> is less than or equal to 0 -or- when <paramref name="value"/> is negative.</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CeilDivision(this int value, int divisor)
+        {
+            if (divisor <= 0)
+            {
+                throw new ArgumentException("Ceiling divisor must be greater than 0.", nameof(divisor));
+            }
+            if (value < 0)
+            {
+                throw new ArgumentException("Ceiling value must be non-negative.", nameof(value));
+            }
+            checked
+            {
+                return (value + (divisor - 1)) / divisor;
+            }
+        }
+        /// <summary>
+        /// Divides two integers and rounds up the result.
+        /// </summary>
+        /// <param name="value">The dividend (must be non-negative).</param>
+        /// <param name="divisor">The divisor (must be greater than 0).</param>
+        /// <returns>The quotient rounded up to the next integer.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="divisor"/> is less than or equal to 0 -or- when <paramref name="value"/> is negative.</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long CeilDivision(this long value, long divisor)
+        {
+            if (divisor <= 0L)
+            {
+                throw new ArgumentException("Ceiling divisor must be greater than 0.", nameof(divisor));
+            }
+            if (value < 0L)
+            {
+                throw new ArgumentException("Ceiling value must be non-negative.", nameof(value));
+            }
+            checked
+            {
+                return (value + (divisor - 1L)) / divisor;
+            }
+        }
+        /// <summary>
+        /// Divides two integers and rounds up the result.
+        /// </summary>
+        /// <param name="value">The dividend (must be non-negative).</param>
+        /// <param name="divisor">The divisor (must be greater than 0).</param>
+        /// <returns>The quotient rounded up to the next integer.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="divisor"/> is equal to 0</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint CeilDivision(this uint value, uint divisor)
+        {
+            if (divisor == 0u)
+            {
+                throw new ArgumentException("Ceiling divisor must be greater than 0.", nameof(divisor));
+            }
+            checked
+            {
+                return (value + (divisor - 1u)) / divisor;
+            }
+        }
+        /// <summary>
+        /// Divides two integers and rounds up the result.
+        /// </summary>
+        /// <param name="value">The dividend (must be non-negative).</param>
+        /// <param name="divisor">The divisor (must be greater than 0).</param>
+        /// <returns>The quotient rounded up to the next integer.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="divisor"/> is equal to 0</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CeilDivision(this ulong value, ulong divisor)
+        {
+            if (divisor == 0ul)
+            {
+                throw new ArgumentException("Ceiling divisor must be greater than 0.", nameof(divisor));
+            }
+            checked
+            {
+                return (value + (divisor - 1ul)) / divisor;
+            }
+        }
+
+        /// <summary>
+        /// Rounds up the given value to the nearest multiple of the specified number.
+        /// </summary>
+        /// <param name="value">The non-negative value to round up.</param>
+        /// <param name="multiple">The positive multiple to which the value will be rounded.</param>
+        /// <returns>The smallest multiple of <paramref name="multiple"/> that is greater than or equal to <paramref name="value"/>.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="multiple"/> is less than or equal to 0 -or- when <paramref name="value"/> is negative.</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CeilToMultiple(this int value, int multiple)
+        {
+            return CeilDivision(value, multiple) * multiple;
+        }
+        /// <summary>
+        /// Rounds up the given value to the nearest multiple of the specified number.
+        /// </summary>
+        /// <param name="value">The non-negative value to round up.</param>
+        /// <param name="multiple">The positive multiple to which the value will be rounded.</param>
+        /// <returns>The smallest multiple of <paramref name="multiple"/> that is greater than or equal to <paramref name="value"/>.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="multiple"/> is less than or equal to 0 -or- when <paramref name="value"/> is negative.</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long CeilToMultiple(this long value, long multiple)
+        {
+            return CeilDivision(value, multiple) * multiple;
+        }
+        /// <summary>
+        /// Rounds up the given value to the nearest multiple of the specified number.
+        /// </summary>
+        /// <param name="value">The non-negative value to round up.</param>
+        /// <param name="multiple">The positive multiple to which the value will be rounded.</param>
+        /// <returns>The smallest multiple of <paramref name="multiple"/> that is greater than or equal to <paramref name="value"/>.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="multiple"/> is equal to 0</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint CeilToMultiple(this uint value, uint multiple)
+        {
+            return CeilDivision(value, multiple) * multiple;
+        }
+        /// <summary>
+        /// Rounds up the given value to the nearest multiple of the specified number.
+        /// </summary>
+        /// <param name="value">The non-negative value to round up.</param>
+        /// <param name="multiple">The positive multiple to which the value will be rounded.</param>
+        /// <returns>The smallest multiple of <paramref name="multiple"/> that is greater than or equal to <paramref name="value"/>.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="multiple"/> is equal to 0</exception>
+        /// <exception cref="OverflowException">Thrown when the operation causes an arithmetic overflow.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CeilToMultiple(this ulong value, ulong multiple)
+        {
+            return CeilDivision(value, multiple) * multiple;
+        }
+
+        /// <summary>
         /// Radius vector of the given angle on the unit circle in euclidean 2D space.
         /// </summary>
         /// <remarks>

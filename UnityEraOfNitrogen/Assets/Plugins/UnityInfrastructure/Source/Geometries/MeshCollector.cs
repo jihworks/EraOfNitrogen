@@ -12,6 +12,7 @@ using Unity.Collections;
 using Unity.VectorGraphics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static Jih.Unity.Infrastructure.Geometries.MeshCollector;
 
 namespace Jih.Unity.Infrastructure.Geometries
 {
@@ -388,13 +389,39 @@ namespace Jih.Unity.Infrastructure.Geometries
             _subMeshes.RemoveAt(index);
         }
 
-        public void TransformPositions(in Matrix4x4 m, int startIndex, int count)
+        public void EditPositions(int startIndex, int count, EditDelegate<Vector3> edit)
         {
+            EditImpl("positions", _positions, startIndex, count, edit, null);
+        }
+        public void EditColors(int startIndex, int count, EditDelegate<Color> edit)
+        {
+            EditImpl("colors", _colors, startIndex, count, edit, null);
+        }
+        public void EditNormals(int startIndex, int count, EditDelegate<Vector3> edit)
+        {
+            EditImpl("normals", _normals, startIndex, count, edit, null);
+        }
+        public void EditTangents(int startIndex, int count, EditDelegate<Vector4> edit)
+        {
+            EditImpl("tangents", _tangents, startIndex, count, edit, null);
+        }
+        public void EditBoneWeights(int startIndex, int count, EditDelegate<IReadOnlyList<BoneWeight1>> edit)
+        {
+            EditImpl("bone weights", _boneWeightLists, startIndex, count, edit, list => list ?? Array.Empty<BoneWeight1>());
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void EditImpl<T>(string context, List<T>? targetList, int startIndex, int count, EditDelegate<T> edit, Func<T, T>? secureValue)
+        {
+            if (targetList is null)
+            {
+                throw new InvalidOperationException($"Cannot edit {context}. Because it is not collecting attribute.");
+            }
             if (startIndex < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
-            if (_positions.Count <= startIndex + count)
+            if (targetList.Count <= startIndex + count)
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
@@ -402,7 +429,11 @@ namespace Jih.Unity.Infrastructure.Geometries
             for (int i = 0; i < count; i++)
             {
                 int index = startIndex + i;
-                _positions[index] = m.MultiplyPoint(_positions[index]);
+                if (!edit(index, targetList[index], out T result))
+                {
+                    break;
+                }
+                targetList[index] = secureValue is not null ? secureValue(result) : result;
             }
         }
 
@@ -649,7 +680,7 @@ namespace Jih.Unity.Infrastructure.Geometries
         /// This method does not close the returned <see cref="Mesh"/>. It means the <see cref="Mesh.isReadable"/> is <c>true</c>.<br/>
         /// The caller may need to call <see cref="Mesh.UploadMeshData(bool)"/> with <c>true</c> to close the <see cref="Mesh"/>.
         /// </remarks>
-        public Mesh GetTrianglesMesh(bool recalculateNormals, bool recalculateTangents, bool force32BitIndices = false)
+        public Mesh ToTrianglesMesh(bool recalculateNormals, bool recalculateTangents, bool force32BitIndices = false)
         {
             IndexFormat indexFormat;
             if (force32BitIndices)
@@ -818,22 +849,9 @@ namespace Jih.Unity.Infrastructure.Geometries
                 _texCoords = new List<Vector2>(capacity);
             }
 
-            public void TransformTexCoords(in Matrix2D m, int startIndex, int count)
+            public void EditTexCoords(int startIndex, int count, EditDelegate<Vector2> edit)
             {
-                if (startIndex < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(startIndex));
-                }
-                if (_texCoords.Count <= startIndex + count)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(count));
-                }
-
-                for (int i = 0; i < count; i++)
-                {
-                    int index = startIndex + i;
-                    _texCoords[index] = m.MultiplyPoint(_texCoords[index]);
-                }
+                EditImpl("positions", _texCoords, startIndex, count, edit, null);
             }
 
             public void SecureTexCoordCapacity(int desiredCapacity)
@@ -856,6 +874,9 @@ namespace Jih.Unity.Infrastructure.Geometries
                 _indices.SecureCapacity(desiredCapacity);
             }
         }
+
+        /// <returns>Return <c>false</c> to abort. The <paramref name="result"/> will be ignored when <c>false</c> returned.</returns>
+        public delegate bool EditDelegate<T>(int index, T source, out T result);
 
         public const int MaxUVSetCount = 8;
     }

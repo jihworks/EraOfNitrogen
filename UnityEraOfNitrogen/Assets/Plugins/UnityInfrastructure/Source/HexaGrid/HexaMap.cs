@@ -101,7 +101,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
                 }
             }
 
-            _vertices = new HexaVertex?[height + 1, width * 2 + 1];
+            _vertices = new HexaVertex?[height + 1, width * 2 + 2];
 
             static HexaVertex GetOrCreateVertex(HexaVertexCoord coord, HexaVertex?[,] dest, CreateHexaVertexDelegate create, HexaMap self)
             {
@@ -121,13 +121,13 @@ namespace Jih.Unity.Infrastructure.HexaGrid
                     int parity = y & 1;
                     int baseX = x * 2 + parity;
 
-                    HexaVertex v300 = GetOrCreateVertex(new HexaVertexCoord(y, baseX), _vertices, createHexaVertex, this);
-                    HexaVertex v0 = GetOrCreateVertex(new HexaVertexCoord(y, baseX + 1), _vertices, createHexaVertex, this);
-                    HexaVertex v60 = GetOrCreateVertex(new HexaVertexCoord(y, baseX + 2), _vertices, createHexaVertex, this);
+                    HexaVertex v300 = GetOrCreateVertex(new HexaVertexCoord(baseX, y), _vertices, createHexaVertex, this);
+                    HexaVertex v0 = GetOrCreateVertex(new HexaVertexCoord(baseX + 1, y), _vertices, createHexaVertex, this);
+                    HexaVertex v60 = GetOrCreateVertex(new HexaVertexCoord(baseX + 2, y), _vertices, createHexaVertex, this);
 
-                    HexaVertex v240 = GetOrCreateVertex(new HexaVertexCoord(y + 1, baseX), _vertices, createHexaVertex, this);
-                    HexaVertex v180 = GetOrCreateVertex(new HexaVertexCoord(y + 1, baseX + 1), _vertices, createHexaVertex, this);
-                    HexaVertex v120 = GetOrCreateVertex(new HexaVertexCoord(y + 1, baseX + 2), _vertices, createHexaVertex, this);
+                    HexaVertex v240 = GetOrCreateVertex(new HexaVertexCoord(baseX, y + 1), _vertices, createHexaVertex, this);
+                    HexaVertex v180 = GetOrCreateVertex(new HexaVertexCoord(baseX + 1, y + 1), _vertices, createHexaVertex, this);
+                    HexaVertex v120 = GetOrCreateVertex(new HexaVertexCoord(baseX + 2, y + 1), _vertices, createHexaVertex, this);
 
                     cell.VerticesInternal[(int)HexaVertexPosition.D0] = v0;
                     cell.VerticesInternal[(int)HexaVertexPosition.D60] = v60;

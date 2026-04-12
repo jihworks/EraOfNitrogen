@@ -30,7 +30,7 @@ namespace Jih.Unity.Infrastructure.Rendering
 
         public int TransformsBufferIncreaseLength { get; }
 
-        public TransformsList InstanceTransforms { get; }
+        public TransformsCollection InstanceTransforms { get; }
 
         public Bounds TotalBounds { get; private set; }
 
@@ -52,7 +52,7 @@ namespace Jih.Unity.Infrastructure.Rendering
             }
             Mesh = mesh;
             Materials = materials;
-            InstanceTransforms = new TransformsList(transformsListCapacity);
+            InstanceTransforms = new TransformsCollection(transformsListCapacity);
             TransformsBufferIncreaseLength = transformsBlockIncreaseLength;
 
             int subMeshCount = Mesh.subMeshCount;
@@ -139,8 +139,7 @@ namespace Jih.Unity.Infrastructure.Rendering
                     }
                 }
 
-                Bounds totalBounds = default;
-                totalBounds.SetMinMax(min, max);
+                Bounds totalBounds = BoundsEx.CreateMinMax(min, max);
 
                 // Expand by max scale * local bounds diagonal length.
                 float radius = localBounds.extents.magnitude * Mathf.Sqrt(maxScaleSq);
@@ -255,7 +254,7 @@ namespace Jih.Unity.Infrastructure.Rendering
             return transformsBuffer;
         }
 
-        public class TransformsList : IList<Matrix4x4>, IReadOnlyList<Matrix4x4>
+        public class TransformsCollection : IList<Matrix4x4>, IReadOnlyList<Matrix4x4>
         {
             internal bool IsDirty { get; set; }
 
@@ -279,7 +278,7 @@ namespace Jih.Unity.Infrastructure.Rendering
 
             bool ICollection<Matrix4x4>.IsReadOnly => ((ICollection<Matrix4x4>)InnerList).IsReadOnly;
 
-            public TransformsList(int capacity)
+            public TransformsCollection(int capacity)
             {
                 InnerList = new List<Matrix4x4>(capacity);
             }
@@ -288,6 +287,13 @@ namespace Jih.Unity.Infrastructure.Rendering
             {
                 InnerList.Add(item);
                 IsDirty = true;
+            }
+
+            public void AddRange(IEnumerable<Matrix4x4> items)
+            {
+                int count = InnerList.Count;
+                InnerList.AddRange(items);
+                IsDirty |= count != InnerList.Count;
             }
 
             public void Insert(int index, Matrix4x4 item)

@@ -1,0 +1,20 @@
+{
+    "name": "Jih.Unity.EraOfNitrogen.Editor",
+    "rootNamespace": "Jih.Unity.EraOfNitrogen.Editor",
+    "references": [
+        "GUID:5d8ed897c1ca6b740a9ed686405a121b",
+        "GUID:192d189d11d04fe4a9a912d5874c5d09",
+        "GUID:3100154437f79b040bab71249c0aab22"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

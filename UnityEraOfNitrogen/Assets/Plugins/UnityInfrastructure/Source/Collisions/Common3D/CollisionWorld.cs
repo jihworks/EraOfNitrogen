@@ -125,11 +125,14 @@ namespace Jih.Unity.Infrastructure.Collisions.Common3D
         /// </summary>
         public void Flush()
         {
-            foreach (var collision in _pendingCellUpdateCollisions)
+            if (_pendingCellUpdateCollisions.Count > 0)
             {
-                UpdateCollisionCells(collision);
+                foreach (var collision in _pendingCellUpdateCollisions)
+                {
+                    UpdateCollisionCells(collision);
+                }
+                _pendingCellUpdateCollisions.Clear();
             }
-            _pendingCellUpdateCollisions.Clear();
         }
 
         public void Clear()

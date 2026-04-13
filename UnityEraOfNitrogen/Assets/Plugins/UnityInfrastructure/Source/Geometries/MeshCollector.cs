@@ -410,29 +410,29 @@ namespace Jih.Unity.Infrastructure.Geometries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void EditImpl<T>(string context, List<T>? targetList, int startIndex, int count, EditDelegate<T> edit, Func<T, T>? secureValue)
+        static void EditImpl<T>(string context, List<T>? targetList, int index, int count, EditDelegate<T> edit, Func<T, T>? secureValue)
         {
             if (targetList is null)
             {
                 throw new InvalidOperationException($"Cannot edit {context}. Because it is not collecting attribute.");
             }
-            if (startIndex < 0)
+            if (index < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(startIndex));
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
-            if (targetList.Count <= startIndex + count)
+            if (count < 0 || targetList.Count < index + count)
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             for (int i = 0; i < count; i++)
             {
-                int index = startIndex + i;
-                if (!edit(index, targetList[index], out T result))
+                int currIndex = index + i;
+                if (!edit(currIndex, targetList[currIndex], out T result))
                 {
                     break;
                 }
-                targetList[index] = secureValue is not null ? secureValue(result) : result;
+                targetList[currIndex] = secureValue is not null ? secureValue(result) : result;
             }
         }
 

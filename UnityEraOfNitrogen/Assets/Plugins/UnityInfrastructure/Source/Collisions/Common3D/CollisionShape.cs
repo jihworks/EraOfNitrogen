@@ -36,7 +36,15 @@ namespace Jih.Unity.Infrastructure.Collisions.Common3D
                 UpdateBounds();
                 return _worldBounds;
             }
-            protected set => _worldBounds = value;
+            protected set
+            {
+                if (_worldBounds == value)
+                {
+                    return;
+                }
+                _worldBounds = value;
+                OnWorldBoundsChanged();
+            }
         }
 
         bool _isWorldTransformDirty = false;

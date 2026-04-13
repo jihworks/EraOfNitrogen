@@ -39,7 +39,6 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             return _neighborsOffsets[(int)position];
         }
-
         /// <summary>
         /// Get next CW position.
         /// </summary>
@@ -54,20 +53,108 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             return (HexaNeighborPosition)((int)position).GetPrevCircularIndex(6);
         }
+        /// <summary>
+        /// Get point-symmetry position from center of the cell.
+        /// </summary>
+        public static HexaNeighborPosition Flip(this HexaNeighborPosition position)
+        {
+            return (HexaNeighborPosition)(((int)position + 3) % 6);
+        }
 
         public static HexaCoord GetOffset(this HexaDiagonalPosition position)
         {
             return _diagonalOffsets[(int)position];
+        }
+        /// <summary>
+        /// Get next CW position.
+        /// </summary>
+        public static HexaDiagonalPosition Next(this HexaDiagonalPosition position)
+        {
+            return (HexaDiagonalPosition)((int)position).GetNextCircularIndex(6);
+        }
+        /// <summary>
+        /// Get next CCW position.
+        /// </summary>
+        public static HexaDiagonalPosition Prev(this HexaDiagonalPosition position)
+        {
+            return (HexaDiagonalPosition)((int)position).GetPrevCircularIndex(6);
+        }
+        /// <summary>
+        /// Get point-symmetry position from center of the cell.
+        /// </summary>
+        public static HexaDiagonalPosition Flip(this HexaDiagonalPosition position)
+        {
+            return (HexaDiagonalPosition)(((int)position + 3) % 6);
         }
 
         public static float GetRadiusDegrees(this HexaVertexPosition position)
         {
             return ((int)position) * 60f - 90f;
         }
+        /// <summary>
+        /// Get next CW position.
+        /// </summary>
+        public static HexaVertexPosition Next(this HexaVertexPosition position)
+        {
+            return (HexaVertexPosition)((int)position).GetNextCircularIndex(6);
+        }
+        /// <summary>
+        /// Get next CCW position.
+        /// </summary>
+        public static HexaVertexPosition Prev(this HexaVertexPosition position)
+        {
+            return (HexaVertexPosition)((int)position).GetPrevCircularIndex(6);
+        }
+        /// <summary>
+        /// Get point-symmetry position from center of the cell.
+        /// </summary>
+        public static HexaVertexPosition Flip(this HexaVertexPosition position)
+        {
+            return (HexaVertexPosition)(((int)position + 3) % 6);
+        }
 
         public static float GetRadiusDegrees(this HexaEdgePosition position)
         {
             return ((int)position) * 60f - 60f;
+        }
+        /// <summary>
+        /// Get next CW position.
+        /// </summary>
+        public static HexaEdgePosition Next(this HexaEdgePosition position)
+        {
+            return (HexaEdgePosition)((int)position).GetNextCircularIndex(6);
+        }
+        /// <summary>
+        /// Get next CCW position.
+        /// </summary>
+        public static HexaEdgePosition Prev(this HexaEdgePosition position)
+        {
+            return (HexaEdgePosition)((int)position).GetPrevCircularIndex(6);
+        }
+        /// <summary>
+        /// Get point-symmetry position from center of the cell.
+        /// </summary>
+        public static HexaEdgePosition Flip(this HexaEdgePosition position)
+        {
+            return (HexaEdgePosition)(((int)position + 3) % 6);
+        }
+
+        public static HexaEdgePosition ConvertToEdge(this HexaNeighborPosition position)
+        {
+            return (HexaEdgePosition)position;
+        }
+        public static HexaNeighborPosition ConvertToNeighbor(this HexaEdgePosition position)
+        {
+            return (HexaNeighborPosition)position;
+        }
+
+        public static HexaVertexPosition ConvertToVertex(this HexaDiagonalPosition position)
+        {
+            return (HexaVertexPosition)position;
+        }
+        public static HexaDiagonalPosition ConvertToDiagonal(this HexaVertexPosition position)
+        {
+            return (HexaDiagonalPosition)position;
         }
 
         static readonly HexaCoord[] _neighborsOffsets = new HexaCoord[]

@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 
 namespace Jih.Unity.Infrastructure.HexaGrid
@@ -55,20 +56,100 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             return NeighborsInternal[(int)position];
         }
+        public bool TryGetNeighborPosition(HexaCell cell, out HexaNeighborPosition position)
+        {
+            int index = NeighborsInternal.IndexOf(cell);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
+
+            position = (HexaNeighborPosition)index;
+            return true;
+        }
+        public HexaNeighborPosition GetNeighborPosition(HexaCell cell)
+        {
+            if (!TryGetNeighborPosition(cell, out HexaNeighborPosition result))
+            {
+                throw new InvalidOperationException($"Cell {cell.Coord} is not a neighbor of the cell {Coord}.");
+            }
+            return result;
+        }
 
         public HexaCell? GetDiagonal(HexaDiagonalPosition position)
         {
             return DiagonalsInternal[(int)position];
+        }
+        public bool TryGetDiagonalPosition(HexaCell cell, out HexaDiagonalPosition position)
+        {
+            int index = DiagonalsInternal.IndexOf(cell);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
+
+            position = (HexaDiagonalPosition)index;
+            return true;
+        }
+        public HexaDiagonalPosition GetDiagonalPosition(HexaCell cell)
+        {
+            if (!TryGetDiagonalPosition(cell, out HexaDiagonalPosition result))
+            {
+                throw new InvalidOperationException($"Cell {cell.Coord} is not a diagonal of the cell {Coord}.");
+            }
+            return result;
         }
 
         public HexaVertex GetVertex(HexaVertexPosition position)
         {
             return VerticesInternal[(int)position];
         }
+        public bool TryGetPosition(HexaVertex vertex, out HexaVertexPosition position)
+        {
+            int index = VerticesInternal.IndexOf(vertex);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
+
+            position = (HexaVertexPosition)index;
+            return true;
+        }
+        public HexaVertexPosition GetPosition(HexaVertex vertex)
+        {
+            if (!TryGetPosition(vertex, out HexaVertexPosition result))
+            {
+                throw new InvalidOperationException($"Vertex {vertex.Coord} is not on the cell {Coord}.");
+            }
+            return result;
+        }
 
         public HexaEdge GetEdge(HexaEdgePosition position)
         {
             return EdgesInternal[(int)position];
+        }
+        public bool TryGetPosition(HexaEdge edge, out HexaEdgePosition position)
+        {
+            int index = EdgesInternal.IndexOf(edge);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
+
+            position = (HexaEdgePosition)index;
+            return true;
+        }
+        public HexaEdgePosition GetPosition(HexaEdge edge)
+        {
+            if (!TryGetPosition(edge, out HexaEdgePosition result))
+            {
+                throw new InvalidOperationException($"Edge {edge.Coord} is not on the cell {Coord}.");
+            }
+            return result;
         }
 
         public IEnumerable<HexaCell> EnumerateNeighbors()

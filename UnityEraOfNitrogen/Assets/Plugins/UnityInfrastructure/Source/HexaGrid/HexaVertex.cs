@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 
 namespace Jih.Unity.Infrastructure.HexaGrid
@@ -41,11 +42,50 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             return CellsInternal[(int)position];
         }
+        public bool TryGetPosition(HexaCell cell, out HexaVertexPosition position)
+        {
+            int index = CellsInternal.IndexOf(cell);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
 
+            position = (HexaVertexPosition)index;
+            return true;
+        }
+        public HexaVertexPosition GetPosition(HexaCell cell)
+        {
+            if (!TryGetPosition(cell, out HexaVertexPosition result))
+            {
+                throw new InvalidOperationException($"Cell {cell.Coord} is not contact with the vertex {Coord}.");
+            }
+            return result;
+        }
 
         public HexaEdge? GetEdge(HexaVertexPosition position)
         {
             return EdgesInternal[(int)position];
+        }
+        public bool TryGetPosition(HexaEdge edge, out HexaVertexPosition position)
+        {
+            int index = EdgesInternal.IndexOf(edge);
+            if (index < 0)
+            {
+                position = default;
+                return false;
+            }
+
+            position = (HexaVertexPosition)index;
+            return true;
+        }
+        public HexaVertexPosition GetPosition(HexaEdge edge)
+        {
+            if (!TryGetPosition(edge, out HexaVertexPosition result))
+            {
+                throw new InvalidOperationException($"Edge {edge.Coord} is not connected with the vertex {Coord}.");
+            }
+            return result;
         }
 
         public IEnumerable<HexaCell> EnumerateCells()

@@ -117,6 +117,40 @@ namespace Jih.Unity.Infrastructure
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int IndexOf<T>(this IReadOnlyList<T> collection, T item)
+        {
+            return IndexOf(collection, item, 0, collection.Count);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int IndexOf<T>(this IReadOnlyList<T> collection, T item, int index)
+        {
+            return IndexOf(collection, item, index, collection.Count - index);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int IndexOf<T>(this IReadOnlyList<T> collection, T item, int index, int count)
+        {
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            if (count < 0 || collection.Count < index + count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
+
+            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
+            for (int i = 0; i < count; i++)
+            {
+                int currIndex = index + i;
+                if (comparer.Equals(collection[currIndex], item))
+                {
+                    return currIndex;
+                }
+            }
+            return -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsValidIndex<T>(this IReadOnlyList<T> collection, int index)
         {
             return 0 <= index && index < collection.Count;

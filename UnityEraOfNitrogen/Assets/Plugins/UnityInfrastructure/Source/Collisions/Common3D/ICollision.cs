@@ -62,6 +62,10 @@ namespace Jih.Unity.Infrastructure.Collisions.Common3D
         /// </summary>
         public uint CollisionChannel { get; set; } = CollisionChannelEx.Default;
 
+        public MeshCollision(int trianglesCapacity = 8) : base(trianglesCapacity)
+        {
+        }
+
         protected override void OnWorldBoundsChanged()
         {
             base.OnWorldBoundsChanged();

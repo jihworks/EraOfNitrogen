@@ -17,7 +17,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         public HexaVertex Vertex0 { get; }
         public HexaVertex Vertex1 { get; }
 
-        public HexaEdgeCoord Coord { get; }
+        public HexaEdgeIndex Index { get; }
 
         /// <summary>
         /// Cell on the right side of the edge, when looking from <see cref="Vertex0"/> to <see cref="Vertex1"/>.
@@ -36,11 +36,11 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         /// </remarks>
         public HexaCell? LeftCell { get; internal set; }
 
-        public HexaEdge(HexaVertex vertex0, HexaVertex vertex1, HexaEdgeCoord coord, HexaCell rightCell)
+        public HexaEdge(HexaVertex vertex0, HexaVertex vertex1, HexaEdgeIndex index, HexaCell rightCell)
         {
             Vertex0 = vertex0;
             Vertex1 = vertex1;
-            Coord = coord;
+            Index = index;
             RightCell = rightCell;
         }
 
@@ -57,7 +57,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             if (!TryGetCwOrder(cell, out vertex0, out vertex1))
             {
-                throw new ArgumentException($"The cell {cell.Coord} is not adjacent to edge {Coord}.", nameof(cell));
+                throw new ArgumentException($"The cell {cell.Coord} is not adjacent to edge {Index}.", nameof(cell));
             }
         }
 

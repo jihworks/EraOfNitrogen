@@ -14,7 +14,8 @@ namespace Jih.Unity.Infrastructure.HexaGrid
     {
         public HexaMap Map { get; }
 
-        public HexaVertexCoord Coord { get; }
+        public HexaVertexIndex Index { get; }
+        public HexaCoordF Coord { get; }
 
         internal HexaCell?[] CellsInternal { get; } = new HexaCell?[6];
         /// <remarks>
@@ -32,9 +33,10 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         /// </remarks>
         public IReadOnlyList<HexaEdge?> Edges => EdgesInternal;
 
-        public HexaVertex(HexaMap map, HexaVertexCoord coord)
+        public HexaVertex(HexaMap map, HexaVertexIndex index, HexaCoordF coord)
         {
             Map = map;
+            Index = index;
             Coord = coord;
         }
 
@@ -58,7 +60,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             if (!TryGetPosition(cell, out HexaVertexPosition result))
             {
-                throw new InvalidOperationException($"Cell {cell.Coord} is not contact with the vertex {Coord}.");
+                throw new InvalidOperationException($"Cell {cell.Coord} is not contact with the vertex {Index}.");
             }
             return result;
         }
@@ -83,7 +85,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             if (!TryGetPosition(edge, out HexaVertexPosition result))
             {
-                throw new InvalidOperationException($"Edge {edge.Coord} is not connected with the vertex {Coord}.");
+                throw new InvalidOperationException($"Edge {edge.Index} is not connected with the vertex {Index}.");
             }
             return result;
         }

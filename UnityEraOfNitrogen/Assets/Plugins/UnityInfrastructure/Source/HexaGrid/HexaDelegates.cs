@@ -10,8 +10,8 @@ using System.Collections.Generic;
 namespace Jih.Unity.Infrastructure.HexaGrid
 {
     public delegate HexaCell CreateHexaCellDelegate(HexaMap map, HexaIndex index, HexaCoord coord);
-    public delegate HexaVertex CreateHexaVertexDelegate(HexaMap map, HexaVertexCoord coord);
-    public delegate HexaEdge CreateHexaEdgeDelegate(HexaVertex vertex0, HexaVertex vertex1, HexaEdgeCoord coord, HexaCell rightCell);
+    public delegate HexaVertex CreateHexaVertexDelegate(HexaMap map, HexaVertexIndex index, HexaCoordF coord);
+    public delegate HexaEdge CreateHexaEdgeDelegate(HexaVertex vertex0, HexaVertex vertex1, HexaEdgeIndex index, HexaCell rightCell);
 
     /// <remarks>
     /// Default implmentation is calling <see cref="HexaCell.EnumerateNeighbors"/> with <paramref name="current"/>.<br/>

@@ -35,8 +35,8 @@ namespace Jih.Unity.Infrastructure.HexaGrid
 
         public HexaCell this[HexaCoord coord] => GetCell(coord) ?? throw new ArgumentOutOfRangeException(nameof(coord));
         public HexaCell this[HexaIndex index] => GetCell(index) ?? throw new ArgumentOutOfRangeException(nameof(index));
-        public HexaVertex this[HexaVertexCoord coord] => GetVertex(coord) ?? throw new ArgumentOutOfRangeException(nameof(coord));
-        public HexaEdge this[HexaEdgeCoord coord] => GetEdge(coord) ?? throw new ArgumentOutOfRangeException(nameof(coord));
+        public HexaVertex this[HexaVertexIndex index] => GetVertex(index) ?? throw new ArgumentOutOfRangeException(nameof(index));
+        public HexaEdge this[HexaEdgeIndex index] => GetEdge(index) ?? throw new ArgumentOutOfRangeException(nameof(index));
 
         readonly HexaCell[,] _cells;
         readonly HexaVertex?[,] _vertices;
@@ -58,8 +58,8 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             Height = height;
 
             createHexaCell ??= ((map, index, coord) => new HexaCell(map, index, coord));
-            createHexaVertex ??= ((map, coord) => new HexaVertex(map, coord));
-            createHexaEdge ??= ((vertex0, vertex1, coord, rightCell) => new HexaEdge(vertex0, vertex1, coord, rightCell));
+            createHexaVertex ??= ((map, index, coord) => new HexaVertex(map, index, coord));
+            createHexaEdge ??= ((vertex0, vertex1, index, rightCell) => new HexaEdge(vertex0, vertex1, index, rightCell));
 
             _cells = new HexaCell[height, width];
             for (int y = 0; y < height; y++)
@@ -103,11 +103,16 @@ namespace Jih.Unity.Infrastructure.HexaGrid
 
             _vertices = new HexaVertex?[height + 1, width * 2 + 2];
 
-            static HexaVertex GetOrCreateVertex(HexaVertexCoord coord, HexaVertex?[,] dest, CreateHexaVertexDelegate create, HexaMap self)
+            static HexaVertex GetOrCreateVertex(HexaVertexIndex index, HexaCoord cellCoord, HexaVertexPosition vertexPosition, HexaVertex?[,] dest, CreateHexaVertexDelegate create, HexaMap self)
             {
-                ref HexaVertex? vertex = ref dest[coord.Y, coord.X];
+                ref HexaVertex? vertex = ref dest[index.Y, index.X];
 
-                vertex ??= create(self, coord);
+                if (vertex is null)
+                {
+                    HexaCoordF offset = vertexPosition.GetOffset();
+
+                    vertex = create(self, index, cellCoord + offset);
+                }
 
                 return vertex;
             }
@@ -121,13 +126,15 @@ namespace Jih.Unity.Infrastructure.HexaGrid
                     int parity = y & 1;
                     int baseX = x * 2 + parity;
 
-                    HexaVertex v300 = GetOrCreateVertex(new HexaVertexCoord(baseX, y), _vertices, createHexaVertex, this);
-                    HexaVertex v0 = GetOrCreateVertex(new HexaVertexCoord(baseX + 1, y), _vertices, createHexaVertex, this);
-                    HexaVertex v60 = GetOrCreateVertex(new HexaVertexCoord(baseX + 2, y), _vertices, createHexaVertex, this);
+                    HexaCoord cellCord = cell.Coord;
 
-                    HexaVertex v240 = GetOrCreateVertex(new HexaVertexCoord(baseX, y + 1), _vertices, createHexaVertex, this);
-                    HexaVertex v180 = GetOrCreateVertex(new HexaVertexCoord(baseX + 1, y + 1), _vertices, createHexaVertex, this);
-                    HexaVertex v120 = GetOrCreateVertex(new HexaVertexCoord(baseX + 2, y + 1), _vertices, createHexaVertex, this);
+                    HexaVertex v300 = GetOrCreateVertex(new HexaVertexIndex(baseX, y), cellCord, HexaVertexPosition.D300, _vertices, createHexaVertex, this);
+                    HexaVertex v0 = GetOrCreateVertex(new HexaVertexIndex(baseX + 1, y), cellCord, HexaVertexPosition.D0, _vertices, createHexaVertex, this);
+                    HexaVertex v60 = GetOrCreateVertex(new HexaVertexIndex(baseX + 2, y), cellCord, HexaVertexPosition.D60, _vertices, createHexaVertex, this);
+
+                    HexaVertex v240 = GetOrCreateVertex(new HexaVertexIndex(baseX, y + 1), cellCord, HexaVertexPosition.D240, _vertices, createHexaVertex, this);
+                    HexaVertex v180 = GetOrCreateVertex(new HexaVertexIndex(baseX + 1, y + 1), cellCord, HexaVertexPosition.D180, _vertices, createHexaVertex, this);
+                    HexaVertex v120 = GetOrCreateVertex(new HexaVertexIndex(baseX + 2, y + 1), cellCord, HexaVertexPosition.D120, _vertices, createHexaVertex, this);
 
                     cell.VerticesInternal[(int)HexaVertexPosition.D0] = v0;
                     cell.VerticesInternal[(int)HexaVertexPosition.D60] = v60;
@@ -148,16 +155,16 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             _horizontalEdges = new HexaEdge?[height + 1, width * 2 + 1];
             _verticalEdges = new HexaEdge[height, width + 1];
 
-            static HexaEdge GetOrCreateEdge(HexaVertex vertex0, HexaVertex vertex1, HexaEdgePosition edgePosition, HexaEdgeCoord coord, HexaCell rightCell, HexaEdge?[,] horizontalDest, HexaEdge[,] verticalDest, CreateHexaEdgeDelegate create)
+            static HexaEdge GetOrCreateEdge(HexaVertex vertex0, HexaVertex vertex1, HexaEdgePosition edgePosition, HexaEdgeIndex index, HexaCell rightCell, HexaEdge?[,] horizontalDest, HexaEdge[,] verticalDest, CreateHexaEdgeDelegate create)
             {
-                HexaEdge?[,] dest = coord.Orientation switch
+                HexaEdge?[,] dest = index.Orientation switch
                 {
                     HexaEdgeOrientation.Horizontal => horizontalDest,
                     HexaEdgeOrientation.Vertical => verticalDest,
                     _ => throw new NotImplementedException(),
                 };
 
-                ref HexaEdge? edge = ref dest[coord.Y, coord.X];
+                ref HexaEdge? edge = ref dest[index.Y, index.X];
                 if (edge is not null)
                 {
                     if (edge.Vertex0 != vertex1 || edge.Vertex1 != vertex0)
@@ -169,7 +176,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
                     return edge;
                 }
 
-                edge = create(vertex0, vertex1, coord, rightCell);
+                edge = create(vertex0, vertex1, index, rightCell);
 
                 switch (edgePosition)
                 {
@@ -219,13 +226,13 @@ namespace Jih.Unity.Infrastructure.HexaGrid
                     int parity = y & 1;
                     int baseHorizontalX = x * 2 + parity;
 
-                    HexaEdge h330 = GetOrCreateEdge(v300, v0, HexaEdgePosition.D330, new HexaEdgeCoord(HexaEdgeOrientation.Horizontal, baseHorizontalX, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
-                    HexaEdge h30 = GetOrCreateEdge(v0, v60, HexaEdgePosition.D30, new HexaEdgeCoord(HexaEdgeOrientation.Horizontal, baseHorizontalX + 1, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
-                    HexaEdge h210 = GetOrCreateEdge(v180, v240, HexaEdgePosition.D210, new HexaEdgeCoord(HexaEdgeOrientation.Horizontal, baseHorizontalX, y + 1), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
-                    HexaEdge h150 = GetOrCreateEdge(v120, v180, HexaEdgePosition.D150, new HexaEdgeCoord(HexaEdgeOrientation.Horizontal, baseHorizontalX + 1, y + 1), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge h330 = GetOrCreateEdge(v300, v0, HexaEdgePosition.D330, new HexaEdgeIndex(HexaEdgeOrientation.Horizontal, baseHorizontalX, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge h30 = GetOrCreateEdge(v0, v60, HexaEdgePosition.D30, new HexaEdgeIndex(HexaEdgeOrientation.Horizontal, baseHorizontalX + 1, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge h210 = GetOrCreateEdge(v180, v240, HexaEdgePosition.D210, new HexaEdgeIndex(HexaEdgeOrientation.Horizontal, baseHorizontalX, y + 1), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge h150 = GetOrCreateEdge(v120, v180, HexaEdgePosition.D150, new HexaEdgeIndex(HexaEdgeOrientation.Horizontal, baseHorizontalX + 1, y + 1), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
 
-                    HexaEdge v270 = GetOrCreateEdge(v240, v300, HexaEdgePosition.D270, new HexaEdgeCoord(HexaEdgeOrientation.Vertical, x, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
-                    HexaEdge v90 = GetOrCreateEdge(v60, v120, HexaEdgePosition.D90, new HexaEdgeCoord(HexaEdgeOrientation.Vertical, x + 1, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge v270 = GetOrCreateEdge(v240, v300, HexaEdgePosition.D270, new HexaEdgeIndex(HexaEdgeOrientation.Vertical, x, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
+                    HexaEdge v90 = GetOrCreateEdge(v60, v120, HexaEdgePosition.D90, new HexaEdgeIndex(HexaEdgeOrientation.Vertical, x + 1, y), rightCell, _horizontalEdges, _verticalEdges, createHexaEdge);
 
                     rightCell.EdgesInternal[(int)HexaEdgePosition.D30] = h30;
                     rightCell.EdgesInternal[(int)HexaEdgePosition.D90] = v90;
@@ -254,9 +261,9 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             return _cells[y, x];
         }
 
-        public HexaVertex? GetVertex(HexaVertexCoord coord)
+        public HexaVertex? GetVertex(HexaVertexIndex index)
         {
-            return GetVertex(coord.X, coord.Y);
+            return GetVertex(index.X, index.Y);
         }
         public HexaVertex? GetVertex(int x, int y)
         {
@@ -267,9 +274,9 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             return _vertices[y, x];
         }
 
-        public HexaEdge? GetEdge(HexaEdgeCoord coord)
+        public HexaEdge? GetEdge(HexaEdgeIndex index)
         {
-            return GetEdge(coord.Orientation, coord.X, coord.Y);
+            return GetEdge(index.Orientation, index.X, index.Y);
         }
         public HexaEdge? GetEdge(HexaEdgeOrientation orientation, int x, int y)
         {

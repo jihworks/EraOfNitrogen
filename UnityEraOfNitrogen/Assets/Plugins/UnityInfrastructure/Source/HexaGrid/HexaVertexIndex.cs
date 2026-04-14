@@ -7,11 +7,11 @@
 
 namespace Jih.Unity.Infrastructure.HexaGrid
 {
-    public struct HexaVertexCoord
+    public struct HexaVertexIndex
     {
         public int X, Y;
 
-        public HexaVertexCoord(int x, int y)
+        public HexaVertexIndex(int x, int y)
         {
             X = x;
             Y = y;

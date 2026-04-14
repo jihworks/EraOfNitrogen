@@ -122,7 +122,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             if (!TryGetPosition(vertex, out HexaVertexPosition result))
             {
-                throw new InvalidOperationException($"Vertex {vertex.Coord} is not on the cell {Coord}.");
+                throw new InvalidOperationException($"Vertex {vertex.Index} is not on the cell {Coord}.");
             }
             return result;
         }
@@ -147,7 +147,7 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         {
             if (!TryGetPosition(edge, out HexaEdgePosition result))
             {
-                throw new InvalidOperationException($"Edge {edge.Coord} is not on the cell {Coord}.");
+                throw new InvalidOperationException($"Edge {edge.Index} is not on the cell {Coord}.");
             }
             return result;
         }

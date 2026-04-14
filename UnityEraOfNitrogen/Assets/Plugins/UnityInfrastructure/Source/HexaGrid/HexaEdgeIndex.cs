@@ -7,12 +7,12 @@
 
 namespace Jih.Unity.Infrastructure.HexaGrid
 {
-    public struct HexaEdgeCoord
+    public struct HexaEdgeIndex
     {
         public HexaEdgeOrientation Orientation;
         public int X, Y;
 
-        public HexaEdgeCoord(HexaEdgeOrientation orientation, int x, int y)
+        public HexaEdgeIndex(HexaEdgeOrientation orientation, int x, int y)
         {
             Orientation = orientation;
             X = x;

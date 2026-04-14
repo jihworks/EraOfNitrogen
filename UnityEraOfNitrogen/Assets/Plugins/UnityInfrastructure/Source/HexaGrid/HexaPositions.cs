@@ -87,6 +87,10 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             return (HexaDiagonalPosition)(((int)position + 3) % 6);
         }
 
+        public static HexaCoordF GetOffset(this HexaVertexPosition position)
+        {
+            return _vertexOffsets[(int)position];
+        }
         public static float GetRadiusDegrees(this HexaVertexPosition position)
         {
             return ((int)position) * 60f - 90f;
@@ -164,6 +168,16 @@ namespace Jih.Unity.Infrastructure.HexaGrid
         static readonly HexaCoord[] _diagonalOffsets = new HexaCoord[]
         {
             new(+1, -2, +1), new(+2, -1, -1), new(+1, +1, -2), new(-1, +2, -1), new(-2, +1, +1), new(-1, -1, +2),
+        };
+
+        static readonly HexaCoordF[] _vertexOffsets = new HexaCoordF[]
+        {
+            new(+1f / 3f, -2f / 3f, +1f / 3f),
+            new(+2f / 3f, -1f / 3f, -1f / 3f),
+            new(+1f / 3f, +1f / 3f, -2f / 3f),
+            new(-1f / 3f, +2f / 3f, -1f / 3f),
+            new(-2f / 3f, +1f / 3f, +1f / 3f),
+            new(-1f / 3f, -1f / 3f, +2f / 3f),
         };
     }
 }

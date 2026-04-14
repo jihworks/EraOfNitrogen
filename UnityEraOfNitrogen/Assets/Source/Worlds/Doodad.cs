@@ -11,6 +11,7 @@ using Jih.Unity.EraOfNitrogen.Worlds.Generators;
 using Jih.Unity.EraOfNitrogen.Worlds.Runtime;
 using Jih.Unity.Infrastructure;
 using Newtonsoft.Json;
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Jih.Unity.EraOfNitrogen.Worlds
@@ -31,6 +32,13 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
 
         [JsonIgnore] Tile? _tile;
         [JsonIgnore] public Tile Tile => _tile.ThrowIfNull(nameof(Tile));
+
+        [JsonIgnore, MemberNotNullWhen(true,
+            nameof(_element))]
+        public bool IsSpawned { get; private set; }
+
+        [JsonIgnore] DoodadElement? _element;
+        [JsonIgnore] public DoodadElement Element => _element.ThrowIfNull(nameof(Element));
 
         [JsonConstructor]
         private Doodad()
@@ -56,6 +64,18 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             _tile = tile;
 
             IsInitialized = true;
+        }
+
+        public void Spawned(DoodadElement element)
+        {
+            if (IsSpawned)
+            {
+                throw new InvalidOperationException("이미 스폰된 두대드를 다시 스폰함.");
+            }
+
+            _element = element;
+
+            IsSpawned = true;
         }
 
         public DoodadTransform GetTransform()

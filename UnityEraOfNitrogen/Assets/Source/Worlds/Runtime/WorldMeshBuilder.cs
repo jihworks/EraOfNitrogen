@@ -315,9 +315,31 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return result;
         }
 
-        public void Spawn(IReadOnlyList<DoodadGroup> doodadGroups)
+        public List<DoodadCluster> Spawn(IReadOnlyList<DoodadGroup> doodadGroups)
         {
+            List<DoodadCluster> result = new(doodadGroups.Count);
 
+            foreach (var group in doodadGroups)
+            {
+                DoodadAssets assets = Assets.GetDoodadAssets(group.Type);
+
+                Mesh mesh = assets.GetMesh(group.Index, out SerializableMesh convexHull);
+                Material[] materials = new Material[] { assets.Material, };
+
+                List<DoodadTransform> transforms = group.Doodads.Select(d => d.GetTransform()).ToList();
+
+                DoodadCluster cluster = new(mesh, convexHull, materials, transforms);
+                result.Add(cluster);
+
+                cluster.RegisterCollisions(World.CollisionWorld);
+
+                for (int i = 0; i < cluster.Elements.Count; i++)
+                {
+                    group.Doodads[i].Spawned(cluster.Elements[i]);
+                }
+            }
+
+            return result;
         }
 
         public readonly struct LandChunk

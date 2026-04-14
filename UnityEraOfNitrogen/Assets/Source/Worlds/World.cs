@@ -47,6 +47,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonIgnore] public MapGrid MapGrid => _mapGrid.ThrowIfNull(nameof(MapGrid));
 
         [JsonIgnore] readonly CollisionWorld _collisionWorld = new(cellSize: 1f);
+        [JsonIgnore] public CollisionWorld CollisionWorld => _collisionWorld;
 
         [JsonConstructor]
         private World()

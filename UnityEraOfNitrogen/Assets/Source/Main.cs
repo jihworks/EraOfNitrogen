@@ -41,6 +41,8 @@ namespace Jih.Unity.EraOfNitrogen
         StateStorage<State> _state = new(nameof(Main));
         State? CurrentState { get => _state.Current; set => _state.Current = value; }
 
+        readonly List<DoodadCluster> _doodadClusters = new();
+
         public Main()
         {
             _instance = new SingletonStorage<Main>(this);
@@ -81,16 +83,26 @@ namespace Jih.Unity.EraOfNitrogen
 
             WorldMeshBuilder worldMeshBuilder = new(world);
 
-            var chunks = worldMeshBuilder.BuildLand();
-            _ = worldMeshBuilder.Spawn(chunks, null);
-
-            GameObject roadsRoot = new() { name = "Roads Root", };
-            roadsRoot.transform.localPosition = new Vector3(0f, 0.01f, 0f);
-
-            var blocks = worldMeshBuilder.BuildRoads();
-            foreach (var pair in blocks)
             {
-                _ = worldMeshBuilder.Spawn(pair, roadsRoot.transform);
+                var chunks = worldMeshBuilder.BuildLand();
+                _ = worldMeshBuilder.Spawn(chunks, null);
+            }
+            {
+                var groups = worldMeshBuilder.BuildDoodads();
+                var clusters = worldMeshBuilder.Spawn(groups);
+
+                _doodadClusters.Clear();
+                _doodadClusters.AddRange(clusters);
+            }
+            {
+                GameObject roadsRoot = new() { name = "Roads Root", };
+                roadsRoot.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+
+                var blocks = worldMeshBuilder.BuildRoads();
+                foreach (var pair in blocks)
+                {
+                    _ = worldMeshBuilder.Spawn(pair, roadsRoot.transform);
+                }
             }
 
             _ = Infrastructure.Json.JsonSave.SerializeObject(world, typeof(World).Namespace);
@@ -99,11 +111,25 @@ namespace Jih.Unity.EraOfNitrogen
         void Update()
         {
             CurrentState?.Update();
+
+            foreach (var doodadCluster in _doodadClusters)
+            {
+                doodadCluster.Update();
+            }
         }
 
         void FixedUpdate()
         {
             CurrentState?.FixedUpdate();
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var doodadCluster in _doodadClusters)
+            {
+                doodadCluster.Dispose();
+            }
+            _doodadClusters.Clear();
         }
     }
 }

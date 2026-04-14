@@ -23,13 +23,15 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
         readonly Dictionary<Biome, DoodadRule> _rules = new()
         {
-            { Biome.Grassland, new DoodadRule(DoodadType.Broadleaf, retryCount: 3, minDistance: 0.8f, borderPushDistance: 0.2f) },
-            { Biome.Rainforest, new DoodadRule(DoodadType.PalmTree, retryCount: 8, minDistance: 0.5f, borderPushDistance: 0.2f) },
-            { Biome.Tundra, new DoodadRule(DoodadType.Needleleaf, retryCount: 5, minDistance: 0.6f, borderPushDistance: 0.2f) },
-            { Biome.Desert, new DoodadRule(DoodadType.Cactus, retryCount: 2, minDistance: 1.2f, borderPushDistance: 0.2f) },
+            { Biome.Grassland, new DoodadRule(DoodadType.Broadleaf, retryCount: 1, minDistance: 1.6f, borderPushDistance: 0.2f) },
+            { Biome.Rainforest, new DoodadRule(DoodadType.PalmTree, retryCount: 4, minDistance: 0.8f, borderPushDistance: 0.2f) },
+            { Biome.Tundra, new DoodadRule(DoodadType.Needleleaf, retryCount: 2, minDistance: 0.3f, borderPushDistance: 0.2f) },
+            { Biome.Desert, new DoodadRule(DoodadType.Cactus, retryCount: 1, minDistance: 4.8f, borderPushDistance: 0.2f) },
             { Biome.Steppe, new DoodadRule(type: 0, retryCount: 0, minDistance: 0f, borderPushDistance: 0f) }, // 배치 안함
             { Biome.Snow, new DoodadRule(type: 0, retryCount: 0, minDistance: 0f, borderPushDistance: 0f) }    // 배치 안함
         };
+
+        readonly int _minScale100 = 24, _maxScale100 = 32;
 
         readonly Dictionary<HexaVertex, Vector3> _vertexUnityLocationMap = new();
 
@@ -83,8 +85,8 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                 GeneratorDoodad doodad = new(rule.Type,
                     _random.NextInt32(0, 100), // 배리에이션 번호. 넉넉한 범위의 아무 난수나 할당.
                     unityLocation,
-                    _random.NextInt32(80, 121) / 100f, // 스케일
-                    _random.NextInt32(0, 360)); // Y 회전
+                    _random.NextInt32(0, 360), // Y 회전
+                    _random.NextInt32(_minScale100, _maxScale100 + 1) / 100f); // 스케일
 
                 cell.Doodads.Add(doodad);
                 provinceDoodads.Add(doodad);
@@ -131,8 +133,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                 HexaNeighborPosition neighborPosition = (HexaNeighborPosition)p;
 
                 GeneratorCell? neighbor = (GeneratorCell?)cell.GetNeighbor(neighborPosition);
-                if (neighbor is null || // 맵 가장 끝인 경우 통과.(항상 바다이므로)
-                    !neighbor.IsLand || // 바다인 경우 통과.
+                if (neighbor is not null &&
                     // 동일 프로빈스인 경우 통과.
                     neighbor.Province == cell.Province)
                 {

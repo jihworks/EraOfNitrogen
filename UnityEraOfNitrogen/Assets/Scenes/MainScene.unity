@@ -756,6 +756,7 @@ MonoBehaviour:
     rgba: 4285745708
   _landMaterial: {fileID: 2100000, guid: 5677be287c9e01f448af08d7c7895a9c, type: 2}
   _oceanMaterial: {fileID: 2100000, guid: 875613e64b374b44aa4b6223fa622eda, type: 2}
+  _provinceBorderMaterial: {fileID: 2100000, guid: 20f3aab8fbac91946b35c94f3daa9f16, type: 2}
   _doodads:
   - _meshes:
     - {fileID: -2202735703270236118, guid: cd36610a38626084e81341f74124caf6, type: 3}

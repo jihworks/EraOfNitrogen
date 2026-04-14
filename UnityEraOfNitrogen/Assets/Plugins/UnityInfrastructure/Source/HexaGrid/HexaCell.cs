@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Jih.Unity.Infrastructure.HexaGrid
 {
@@ -148,6 +149,28 @@ namespace Jih.Unity.Infrastructure.HexaGrid
             if (!TryGetPosition(edge, out HexaEdgePosition result))
             {
                 throw new InvalidOperationException($"Edge {edge.Index} is not on the cell {Coord}.");
+            }
+            return result;
+        }
+
+        public bool TryGetSharedEdge(HexaCell neighbor, [NotNullWhen(true)] out HexaEdge? edge, out HexaEdgePosition edgePosition)
+        {
+            if (!TryGetNeighborPosition(neighbor, out HexaNeighborPosition neighborPosition))
+            {
+                edge = default;
+                edgePosition = default;
+                return false;
+            }
+
+            edgePosition = neighborPosition.ConvertToEdge();
+            edge = GetEdge(edgePosition);
+            return true;
+        }
+        public HexaEdge GetShaderedEdge(HexaCell neighbor, out HexaEdgePosition edgePosition)
+        {
+            if (!TryGetSharedEdge(neighbor, out HexaEdge? result, out edgePosition))
+            {
+                throw new InvalidOperationException($"Cell {neighbor.Coord} is not a neighbor of the cell {Coord}.");
             }
             return result;
         }

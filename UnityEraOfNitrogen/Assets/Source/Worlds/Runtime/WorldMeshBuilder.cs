@@ -37,7 +37,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             _chunkCountY = grid.Height.CeilDivision(ChunkSize);
         }
 
-        public List<LandChunk> BuildLand()
+        public List<LandChunkResult> BuildLand()
         {
             if (!World.IsInitialized)
             {
@@ -46,7 +46,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
 
             WorldGrid grid = World.MapGrid;
 
-            List<LandChunk> chunks = new(_chunkCountX * _chunkCountY);
+            List<LandChunkResult> chunks = new(_chunkCountX * _chunkCountY);
             foreach (var ci in EnumerateChunks(_chunkCountX, _chunkCountY))
             {
                 List<WorldCell> cells = new(ChunkSize * ChunkSize);
@@ -68,7 +68,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
 
                 if (cells.Count > 0)
                 {
-                    chunks.Add(new LandChunk(ci.X, ci.Y, ci.BaseGridX, ci.BaseGridY, cells, new MeshCollector(AdditionalAttributes.Color)));
+                    chunks.Add(new LandChunkResult(ci.X, ci.Y, ci.BaseGridX, ci.BaseGridY, cells, new MeshCollector(AdditionalAttributes.Color)));
                 }
             }
 
@@ -80,7 +80,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return chunks;
         }
 
-        static void CollectLandChunk(Assets assets, in LandChunk chunk)
+        static void CollectLandChunk(Assets assets, in LandChunkResult chunk)
         {
             MeshCollector meshCollector = chunk.MeshCollector;
 
@@ -121,14 +121,14 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
-        public List<GameObject> Spawn(IReadOnlyList<LandChunk> chunks, Transform? parent)
+        public List<GameObject> Spawn(IReadOnlyList<LandChunkResult> landResults, Transform? parent)
         {
             Material landMaterial = Assets.LandMaterial;
             Material[] materials = new Material[] { landMaterial, };
 
-            List<GameObject> meshObjs = new(chunks.Count);
+            List<GameObject> meshObjs = new(landResults.Count);
 
-            foreach (var chunk in chunks)
+            foreach (var chunk in landResults)
             {
                 string name = $"Land Mesh {chunk.ChunkX} x {chunk.ChunkY}";
 
@@ -154,18 +154,18 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return meshObjs;
         }
 
-        public Dictionary<Province, List<RoadBlock>> BuildRoads()
+        public Dictionary<Province, List<RoadElementResult>> BuildRoads()
         {
             if (!World.IsInitialized)
             {
                 throw new InvalidOperationException("초기화되지 않은 월드로부터 도로를 빌드할 수 없음.");
             }
 
-            Dictionary<Province, List<RoadBlock>> result = new(World.Provinces.Count);
+            Dictionary<Province, List<RoadElementResult>> result = new(World.Provinces.Count);
 
             foreach (var province in World.Provinces)
             {
-                List<RoadBlock> roadBlocks = new(province.Tiles.Count);
+                List<RoadElementResult> roadBlocks = new(province.Tiles.Count);
                 result.Add(province, roadBlocks);
 
                 foreach (var tile in province.Tiles)
@@ -195,7 +195,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
 
                     if (branch == RoadBranch.None)
                     {
-                        roadBlocks.Add(new RoadBlock(province, tile, tile.Cell, branch, branch, 0));
+                        roadBlocks.Add(new RoadElementResult(province, tile, tile.Cell, branch, branch, 0));
                         continue;
                     }
 
@@ -216,16 +216,16 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                         throw new InvalidOperationException($"도로 브랜치 {branch} 에 대한 메시 브랜치를 찾지 못함.");
                     }
 
-                    roadBlocks.Add(new RoadBlock(province, tile, tile.Cell, branch, meshBranch, cwShiftCount));
+                    roadBlocks.Add(new RoadElementResult(province, tile, tile.Cell, branch, meshBranch, cwShiftCount));
                 }
             }
 
             return result;
         }
 
-        public List<RoadElement> Spawn(KeyValuePair<Province, List<RoadBlock>> roadBlocks, Transform? parent)
+        public List<RoadElement> Spawn(KeyValuePair<Province, List<RoadElementResult>> roadResults, Transform? parent)
         {
-            List<RoadElement> result = new(roadBlocks.Value.Count);
+            List<RoadElement> result = new(roadResults.Value.Count);
 
             RoadAssets assets = Assets.GetRoadAssets(RoadLevel.Dirt/*TODO: 테스트 용 도로 레벨.*/);
 
@@ -237,7 +237,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             MaterialPropertyBlock propertyBlock = new();
             propertyBlock.SetTexture(ShaderIds.MainTexure, mainTexture);
 
-            foreach (var roadBlock in roadBlocks.Value)
+            foreach (var roadBlock in roadResults.Value)
             {
                 Mesh mesh = assets.GetMesh(roadBlock.MeshBranch, out MeshCollector meshCollector);
 
@@ -290,7 +290,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return result;
         }
 
-        public List<DoodadGroup> BuildDoodads()
+        public List<DoodadClusterResult> BuildDoodads()
         {
             if (!World.IsInitialized)
             {
@@ -303,7 +303,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                 return doodadAssets.VariantToIndex(variant);
             }
 
-            List<DoodadGroup> result = new(World.Provinces.Count * 3);
+            List<DoodadClusterResult> result = new(World.Provinces.Count * 3);
 
             foreach (var provinceGroup in World.Provinces.SelectMany(
                 p => p.Tiles.SelectMany(
@@ -317,7 +317,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                     {
                         List<Doodad> doodads = indexGroup.Select(x => x.Doodad).ToList();
 
-                        result.Add(new DoodadGroup(provinceGroup.Key, typeGroup.Key, indexGroup.Key, doodads));
+                        result.Add(new DoodadClusterResult(provinceGroup.Key, typeGroup.Key, indexGroup.Key, doodads));
                     }
                 }
             }
@@ -325,11 +325,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             return result;
         }
 
-        public List<DoodadCluster> Spawn(IReadOnlyList<DoodadGroup> doodadGroups)
+        public List<DoodadCluster> Spawn(IReadOnlyList<DoodadClusterResult> doodadResults)
         {
-            List<DoodadCluster> result = new(doodadGroups.Count);
+            List<DoodadCluster> result = new(doodadResults.Count);
 
-            foreach (var group in doodadGroups)
+            foreach (var group in doodadResults)
             {
                 Province province = group.Province;
                 IReadOnlyList<Doodad> doodads = group.Doodads;
@@ -351,6 +351,194 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                     doodads[i].Spawned(cluster.Elements[i]);
                 }
                 province.Spwaned(cluster);
+            }
+
+            return result;
+        }
+
+        public List<ProvinceBorderResult> BuildProvinceBorders()
+        {
+            if (!World.IsInitialized)
+            {
+                throw new InvalidOperationException("초기화되지 않은 월드로부터 프로빈스 경계를 빌드할 수 없음.");
+            }
+
+            const float SolidThickness = 0.03f;
+            const float FallOffThickness = 0.06f;
+
+            List<ProvinceBorderResult> result = new(World.Provinces.Count);
+            foreach (var province in World.Provinces)
+            {
+                List<(WorldCell Cell, HexaEdge Edge)> borderEdges = new();
+                foreach (var tile in province.Tiles)
+                {
+                    WorldCell cell = tile.Cell;
+
+                    for (int p = 0; p < 6; p++)
+                    {
+                        HexaNeighborPosition position = (HexaNeighborPosition)p;
+
+                        WorldCell? neighbor = cell.GetNeighbor(position);
+                        if (neighbor is not null &&
+                            neighbor.Tile.Province == province)
+                        {
+                            continue;
+                        }
+
+                        HexaEdge edge = cell.GetEdge(position.ConvertToEdge());
+                        borderEdges.Add((cell, edge));
+                    }
+                }
+
+                MeshCollector collector = new(AdditionalAttributes.Color);
+
+                // 일자 부분.
+                foreach (var (cell, edge) in borderEdges)
+                {
+                    Vector3 cellCenter = ScreenToUnity(HexaToScreen(cell.Coord));
+
+                    edge.GetCwOrder(cell, out HexaVertex vertex0, out HexaVertex vertex1);
+                    Vector3 v0Point = ScreenToUnity(HexaToScreen(vertex0.Coord));
+                    Vector3 v1Point = ScreenToUnity(HexaToScreen(vertex1.Coord));
+
+                    Vector3 v0ToCenterDir = (cellCenter - v0Point).normalized;
+                    Vector3 v1ToCenterDir = (cellCenter - v1Point).normalized;
+
+                    Vector3 v0MidPoint = v0Point + v0ToCenterDir * SolidThickness;
+                    Vector3 v1MidPoint = v1Point + v1ToCenterDir * SolidThickness;
+
+                    Vector3 v0EndPoint = v0MidPoint + v0ToCenterDir * FallOffThickness;
+                    Vector3 v1EndPoint = v1MidPoint + v1ToCenterDir * FallOffThickness;
+
+                    // R = 솔리드 컬러, G = 폴오프 컬러.
+                    VertexData v0SolidD = new(v0Point, new Color(1f, 0f, 0f, 1f));
+                    VertexData v1SolidD = new(v1Point, new Color(1f, 0f, 0f, 1f));
+
+                    VertexData v0MidSolidD = new(v0MidPoint, new Color(1f, 0f, 0f, 1f));
+                    VertexData v1MidSolidD = new(v1MidPoint, new Color(1f, 0f, 0f, 1f));
+
+                    VertexData v0MidFalloffD = new(v0MidPoint, new Color(0f, 1f, 0f, 1f));
+                    VertexData v1MidFalloffD = new(v1MidPoint, new Color(0f, 1f, 0f, 1f));
+
+                    VertexData v0EndFalloffD = new(v0EndPoint, new Color(0f, 1f, 0f, 0f));
+                    VertexData v1EndFalloffD = new(v1EndPoint, new Color(0f, 1f, 0f, 0f));
+
+                    collector.AppendQuad(v0EndFalloffD, v1EndFalloffD, v0MidFalloffD, v1MidFalloffD);
+                    collector.AppendQuad(v0MidSolidD, v1MidSolidD, v0SolidD, v1SolidD);
+                }
+                // 바깥쪽 꺾인 부분.
+                HashSet<HexaCell> borderCells = new(borderEdges.Count);
+                HashSet<HexaVertex> borderVertices = new(borderEdges.Count * 2);
+                foreach (var (cell, edge) in borderEdges)
+                {
+                    borderCells.Add(cell);
+
+                    borderVertices.Add(edge.Vertex0);
+                    borderVertices.Add(edge.Vertex1);
+                }
+                foreach (var vertex in borderVertices)
+                {
+                    // 엣지의 양쪽 셀 모두가 현재 경계 셀인 경우.
+                    foreach (var edge in vertex.EnumerateEdges())
+                    {
+                        if (edge.EnumerateCells().Count(c => borderCells.Contains(c)) < 2)
+                        {
+                            continue;
+                        }
+
+                        HexaVertex vertex0, vertex1;
+                        HexaCell rightCell, leftCell;
+                        if (edge.Is0(vertex))
+                        {
+                            vertex0 = edge.Vertex0;
+                            vertex1 = edge.Vertex1;
+
+                            rightCell = edge.RightCell;
+                            leftCell = edge.LeftCell ?? throw new InvalidOperationException("논리적으로 불가능함.");
+                        }
+                        else // 반대로 연결된 경우, 뒤집음.
+                        {
+                            vertex0 = edge.Vertex1;
+                            vertex1 = edge.Vertex0;
+
+                            rightCell = edge.LeftCell ?? throw new InvalidOperationException("논리적으로 불가능함.");
+                            leftCell = edge.RightCell;
+                        }
+
+                        Vector3 v0Point = ScreenToUnity(HexaToScreen(vertex0.Coord));
+                        Vector3 v1Point = ScreenToUnity(HexaToScreen(vertex1.Coord));
+
+                        Vector3 rightPoint = ScreenToUnity(HexaToScreen(rightCell.Coord));
+                        Vector3 leftPoint = ScreenToUnity(HexaToScreen(leftCell.Coord));
+
+                        Vector3 centerDir = (v1Point - v0Point).normalized;
+                        Vector3 rightDir = (rightPoint - v0Point).normalized;
+                        Vector3 leftDir = (leftPoint - v0Point).normalized;
+
+                        Vector3 rightMidPoint = v0Point + rightDir * SolidThickness;
+                        Vector3 rightEndPoint = rightMidPoint + rightDir * FallOffThickness;
+
+                        Vector3 centerMidPoint = v0Point + centerDir * SolidThickness;
+                        Vector3 centerEndPoint = centerMidPoint + centerDir * FallOffThickness;
+
+                        Vector3 leftMidPoint = v0Point + leftDir * SolidThickness;
+                        Vector3 leftEndPoint = leftMidPoint + leftDir * FallOffThickness;
+
+                        VertexData v0SolidD = new(v0Point, new Color(1f, 0f, 0f, 1f));
+
+                        VertexData rightMidSolidD = new(rightMidPoint, new Color(1f, 0f, 0f, 1f));
+                        VertexData rightMidFalloffD = new(rightMidPoint, new Color(0f, 1f, 0f, 1f));
+                        VertexData rightEndFalloffD = new(rightEndPoint, new Color(0f, 1f, 0f, 0f));
+
+                        VertexData centerMidSolidD = new(centerMidPoint, new Color(1f, 0f, 0f, 1f));
+                        VertexData centerMidFalloffD = new(centerMidPoint, new Color(0f, 1f, 0f, 1f));
+                        VertexData centerEndFalloffD = new(centerEndPoint, new Color(0f, 1f, 0f, 0f));
+
+                        VertexData leftMidSolidD = new(leftMidPoint, new Color(1f, 0f, 0f, 1f));
+                        VertexData leftMidFalloffD = new(leftMidPoint, new Color(0f, 1f, 0f, 1f));
+                        VertexData leftEndFalloffD = new(leftEndPoint, new Color(0f, 1f, 0f, 0f));
+
+                        collector.AppendQuad(rightEndFalloffD, centerEndFalloffD, rightMidFalloffD, centerMidFalloffD);
+                        collector.AppendQuad(centerEndFalloffD, leftEndFalloffD, centerMidFalloffD, leftMidFalloffD);
+
+                        collector.AppendQuad(rightMidSolidD, centerMidSolidD, v0SolidD, leftMidSolidD);
+                    }
+                }
+
+                result.Add(new ProvinceBorderResult(province, collector));
+            }
+
+            return result;
+        }
+
+        public List<GameObject> Spawn(IReadOnlyList<ProvinceBorderResult> provinceBorderResults, Transform? parent)
+        {
+            Material borderMaterial = Assets.ProvinceBorderMaterial;
+
+            List<GameObject> result = new(provinceBorderResults.Count);
+            foreach (var boderResult in provinceBorderResults)
+            {
+                string name = $"Province {boderResult.Province.Id} Border";
+
+                Mesh mesh = boderResult.MeshCollector.ToTrianglesMesh(false, false);
+                mesh.name = name;
+
+                GameObject gameObject = new() { name = name, };
+
+                if (parent != null)
+                {
+                    gameObject.transform.SetParent(parent, false);
+                }
+
+                MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
+
+                MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+                meshRenderer.sharedMaterial = borderMaterial;
+                meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                meshRenderer.receiveShadows = false;
+
+                result.Add(gameObject);
             }
 
             return result;
@@ -402,14 +590,14 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
-        public readonly struct LandChunk
+        public readonly struct LandChunkResult
         {
             public readonly int ChunkX, ChunkY;
             public readonly int GridX, GridY;
             public readonly IReadOnlyList<WorldCell> Cells;
             public readonly MeshCollector MeshCollector;
 
-            public LandChunk(int chunkX, int chunkY, int gridX, int gridY, IReadOnlyList<WorldCell> cells, MeshCollector meshCollector)
+            public LandChunkResult(int chunkX, int chunkY, int gridX, int gridY, IReadOnlyList<WorldCell> cells, MeshCollector meshCollector)
             {
                 ChunkX = chunkX;
                 ChunkY = chunkY;
@@ -420,7 +608,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
-        public readonly struct RoadBlock
+        public readonly struct RoadElementResult
         {
             public readonly Province Province;
             public readonly Tile Tile;
@@ -429,7 +617,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             public readonly RoadBranch MeshBranch;
             public readonly int CwShiftCount;
 
-            public RoadBlock(Province province, Tile tile, WorldCell cell, RoadBranch branch, RoadBranch meshBranch, int cwShiftCount)
+            public RoadElementResult(Province province, Tile tile, WorldCell cell, RoadBranch branch, RoadBranch meshBranch, int cwShiftCount)
             {
                 Province = province;
                 Tile = tile;
@@ -440,19 +628,31 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
-        public readonly struct DoodadGroup
+        public readonly struct DoodadClusterResult
         {
             public readonly Province Province;
             public readonly DoodadType Type;
             public readonly int Index;
             public readonly IReadOnlyList<Doodad> Doodads;
 
-            public DoodadGroup(Province province, DoodadType type, int index, IReadOnlyList<Doodad> doodads)
+            public DoodadClusterResult(Province province, DoodadType type, int index, IReadOnlyList<Doodad> doodads)
             {
                 Province = province;
                 Type = type;
                 Index = index;
                 Doodads = doodads;
+            }
+        }
+
+        public readonly struct ProvinceBorderResult
+        {
+            public readonly Province Province;
+            public readonly MeshCollector MeshCollector;
+
+            public ProvinceBorderResult(Province province, MeshCollector meshCollector)
+            {
+                Province = province;
+                MeshCollector = meshCollector;
             }
         }
 

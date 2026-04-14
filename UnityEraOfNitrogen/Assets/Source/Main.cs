@@ -165,6 +165,16 @@ namespace Jih.Unity.EraOfNitrogen
             stopwatch.Stop();
             Debug.Log($"두대드 컬링(도로): {stopwatch.ElapsedMilliseconds}ms");
             stopwatch.Restart();
+            {
+                GameObject provinceBordersRoot = new() { name = "Province Borders Root", };
+                provinceBordersRoot.transform.position = new Vector3(0f, 0.015f, 0f);
+
+                var borders = worldMeshBuilder.BuildProvinceBorders();
+                worldMeshBuilder.Spawn(borders, provinceBordersRoot.transform);
+            }
+            stopwatch.Stop();
+            Debug.Log($"프로빈스 보더: {stopwatch.ElapsedMilliseconds}ms");
+            stopwatch.Restart();
 
             _world = world;
 

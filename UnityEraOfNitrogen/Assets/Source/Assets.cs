@@ -41,6 +41,10 @@ namespace Jih.Unity.EraOfNitrogen
         [SerializeField] Material? _oceanMaterial;
         public Material OceanMaterial => _oceanMaterial.ThrowIfNull(nameof(OceanMaterial));
 
+        [Space(12f)]
+        [SerializeField] Material? _provinceBorderMaterial;
+        public Material ProvinceBorderMaterial => _provinceBorderMaterial.ThrowIfNull(nameof(ProvinceBorderMaterial));
+
         [Header("Doodad")]
         [SerializeField] DoodadAssets[] _doodads = Array.Empty<DoodadAssets>();
 

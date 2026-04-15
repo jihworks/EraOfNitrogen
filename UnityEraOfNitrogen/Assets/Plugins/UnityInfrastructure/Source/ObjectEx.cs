@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -53,6 +54,32 @@ namespace Jih.Unity.Infrastructure
                 throw new System.NullReferenceException($"Unity object '{objectName}' is null.");
             }
             value = obj;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Destroy<T>(ref T? obj) where T : Object
+        {
+            if (obj == null)
+            {
+                return;
+            }
+            Object.Destroy(obj);
+            obj = null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void DestroyAll<T>(List<T> collection) where T : Object
+        {
+            for (int i = 0; i < collection.Count; i++)
+            {
+                T obj = collection[i];
+                if (obj == null)
+                {
+                    continue;
+                }
+                Object.Destroy(obj);
+            }
+            collection.Clear();
         }
     }
 }

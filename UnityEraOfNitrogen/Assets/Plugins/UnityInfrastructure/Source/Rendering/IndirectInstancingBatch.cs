@@ -143,7 +143,7 @@ namespace Jih.Unity.Infrastructure.Rendering
 
                 // Expand by max scale * local bounds diagonal length.
                 float radius = localBounds.extents.magnitude * Mathf.Sqrt(maxScaleSq);
-                totalBounds.Expand(radius * 2f);
+                totalBounds = totalBounds.GetInflated(radius);
 
                 TotalBounds = totalBounds;
             }

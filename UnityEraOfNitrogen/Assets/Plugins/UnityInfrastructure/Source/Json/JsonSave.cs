@@ -8,6 +8,7 @@
 #if INFRASTRUCTURE_USE_NEWTONSOFT_JSON
 
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Jih.Unity.Infrastructure.Json
@@ -63,36 +64,33 @@ namespace Jih.Unity.Infrastructure.Json
         {
             runtimeRootNamespace = RefineRuntimeRootNamespace(runtimeRootNamespace);
 
-            lock (_settings)
+            if (_settings.TryGetValue(runtimeRootNamespace, out JsonSerializerSettings result))
             {
-                if (_settings.TryGetValue(runtimeRootNamespace, out JsonSerializerSettings result))
-                {
-                    return result;
-                }
-
-                result = new()
-                {
-                    ContractResolver = new JsonSaveContractResolver(),
-
-                    // This option allows private constructors.
-                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-
-                    // This option will replace collection fields with new instances.
-                    ObjectCreationHandling = ObjectCreationHandling.Replace,
-
-                    PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-
-                    TypeNameHandling = TypeNameHandling.Auto,
-                    // This option has no effect because of custom SerializationBinder.
-                    // TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-                    SerializationBinder = new JsonSaveSerializationBinder(runtimeRootNamespace),
-
-                    Formatting = Formatting.Indented,
-                };
-                _settings.Add(runtimeRootNamespace, result);
-
                 return result;
             }
+
+            result = new()
+            {
+                ContractResolver = new JsonSaveContractResolver(),
+
+                // This option allows private constructors.
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+
+                // This option will replace collection fields with new instances.
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+
+                PreserveReferencesHandling = PreserveReferencesHandling.Objects,
+
+                TypeNameHandling = TypeNameHandling.Auto,
+                // This option has no effect because of custom SerializationBinder.
+                // TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
+                SerializationBinder = new JsonSaveSerializationBinder(runtimeRootNamespace),
+
+                Formatting = Formatting.Indented,
+            };
+            _settings.TryAdd(runtimeRootNamespace, result);
+
+            return result;
         }
 
         static string RefineRuntimeRootNamespace(string? runtimeRootNamespace)
@@ -110,7 +108,7 @@ namespace Jih.Unity.Infrastructure.Json
             return runtimeRootNamespace;
         }
 
-        static readonly Dictionary<string, JsonSerializerSettings> _settings = new();
+        static readonly ConcurrentDictionary<string, JsonSerializerSettings> _settings = new();
     }
 }
 

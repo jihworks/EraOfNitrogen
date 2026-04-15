@@ -106,6 +106,15 @@ namespace Jih.Unity.Infrastructure
         {
             return CreateMinMax(bounds.min - size, bounds.max + size);
         }
+        /// <remarks>
+        /// Add or subtract given size to min and max.<br/>
+        /// In contrast, <see cref="Bounds.Expand(Vector3)"/> applying <b>half</b> size.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Bounds GetInflated(this Bounds bounds, float size)
+        {
+            return GetInflated(bounds, Vector3Ex.CreateUniform(size));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Raycast(this Bounds bounds, Vector3 rayOrigin, Vector3 rayDirection)

@@ -791,6 +791,6 @@ namespace Jih.Unity.Infrastructure.Collisions.Common3D
             }
         }
 
-        const int ParallelismThreshold = 128;
+        const int ParallelismThreshold = 1024;
     }
 }

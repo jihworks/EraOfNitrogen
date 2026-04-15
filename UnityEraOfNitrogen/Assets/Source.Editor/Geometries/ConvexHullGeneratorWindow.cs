@@ -15,7 +15,7 @@ using UnityEngine;
 
 namespace Jih.Unity.EraOfNitrogen.Editor
 {
-    public class ConvexHullGeneratorWindow : ConvexHullGeneratorWindowBase
+    public class ConvexHullGeneratorWindow : BaseConvexHullGeneratorWindow
     {
         [MenuItem("JIH/Generate Convex Hull")]
         private static void ShowWindow()

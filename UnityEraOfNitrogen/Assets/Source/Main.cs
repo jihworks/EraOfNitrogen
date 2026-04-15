@@ -68,7 +68,7 @@ namespace Jih.Unity.EraOfNitrogen
         void Start()
         {
             // 프레임 기본값.
-            InputFrameStack.Push(new InputFrame(this, ui: false, player: false));
+            InputFrameStack.Push(new InputFrame(this, ui: false, player: true/*TODO: 테스트 인풋 설정*/));
             CursorFrameStack.Push(new CursorFrame(this, lockMode: CursorLockMode.None, cursorVisible: true));
             TimeFrameStack.Push(new TimeFrame(this, timeScale: 1f));
 

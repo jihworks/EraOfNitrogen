@@ -7,6 +7,7 @@
 
 using Jih.Unity.Infrastructure.Geometries;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,26 +15,30 @@ namespace Jih.Unity.Infrastructure.Editor.Geometries
 {
     public abstract class BaseConvexHullGeneratorWindow : EditorWindow
     {
-        Mesh? _sourceMesh;
+        [SerializeField] List<Mesh?> _sourceMeshes = new();
+        SerializedObject? _serializedObject;
+        SerializedProperty? _sourceMeshesProperty;
 
-        string _savePath = "Assets/ConvexHull.asset";
+        string _saveDirectory = "Assets";
+        string _fileNameFormat = "{0} ConvexHull";
 
         bool _previewConvexHull = true;
-        GameObject? _previewObject;
-        Material? _previewMaterial;
+        GameObject? _previewRoot;
+        Material? _convexHullPreviewMaterial, _sourceMeshPreviewMaterial;
 
-        int _originalVertexCount, _originalTriangleCount;
-        int _hullVertexCount, _hullTriangleCount;
-        float _vertexReductionPercent, _triangleReductionPercent;
+        readonly List<Stats> _stats = new();
+        bool _showStats = false;
+        Vector2 _scrollPosition;
 
-        bool _showEfficiencyStats = false;
-
-        protected abstract Material CreatePreviewMaterial();
+        protected abstract void CreatePreviewMaterials(out Material convexHullPreviewMaterial, out Material sourceMeshPreviewMaterial);
         protected abstract void GenerateHull(Vector3[] points, out List<Vector3> hullVertices, out List<int> hullTriangles);
 
         protected virtual void OnEnable()
         {
-            _previewMaterial = CreatePreviewMaterial();
+            _serializedObject = new SerializedObject(this);
+            _sourceMeshesProperty = _serializedObject.FindProperty(nameof(_sourceMeshes));
+
+            CreatePreviewMaterials(out _convexHullPreviewMaterial, out _sourceMeshPreviewMaterial);
             ResetStats();
         }
 
@@ -44,49 +49,50 @@ namespace Jih.Unity.Infrastructure.Editor.Geometries
 
         protected virtual void OnGUI()
         {
-            EditorGUILayout.LabelField("Convex Hull Generator", EditorStyles.boldLabel);
-            EditorGUILayout.Space();
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
-            Mesh? prevMesh = _sourceMesh;
-
-            _sourceMesh = (Mesh)EditorGUILayout.ObjectField("Source Mesh", _sourceMesh, typeof(Mesh), false);
-
-            if (prevMesh != _sourceMesh)
+            _serializedObject?.Update();
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(_sourceMeshesProperty, new GUIContent("Source Meshes"), true);
+            if (EditorGUI.EndChangeCheck())
             {
                 ResetStats();
                 DestroyPreview();
             }
+            _serializedObject?.ApplyModifiedProperties();
+
+            EditorGUILayout.Space();
 
             EditorGUILayout.BeginHorizontal();
-
-            EditorGUILayout.LabelField("Save Path", GUILayout.Width(80));
-            _savePath = EditorGUILayout.TextField(_savePath, GUILayout.ExpandWidth(true));
-
+            EditorGUILayout.LabelField("Save Directory", GUILayout.Width(110));
+            _saveDirectory = EditorGUILayout.TextField(_saveDirectory, GUILayout.ExpandWidth(true));
             if (GUILayout.Button("Browse...", GUILayout.Width(80)))
             {
-                BrowseSavePath();
+                BrowseSaveDirectory();
             }
-
             EditorGUILayout.EndHorizontal();
 
-            if (!string.IsNullOrEmpty(_savePath) && !_savePath.EndsWith(".asset"))
-            {
-                _savePath += ".asset";
-            }
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("File Name Format", GUILayout.Width(110));
+            _fileNameFormat = EditorGUILayout.TextField(_fileNameFormat, GUILayout.ExpandWidth(true));
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox("'{0}' will be replaced by source mesh name.\nExample: '{0} ConvexHull' -> 'SourceMeshName ConvexHull.asset'", MessageType.Info);
 
+            EditorGUILayout.Space();
             _previewConvexHull = EditorGUILayout.Toggle("Preview Convex Hull", _previewConvexHull);
 
             EditorGUILayout.Space();
-            EditorGUI.BeginDisabledGroup(_sourceMesh == null);
+            bool hasValidMesh = _sourceMeshes.Exists(m => m != null);
+            EditorGUI.BeginDisabledGroup(!hasValidMesh);
 
-            if (GUILayout.Button("Save Convex Hull"))
+            if (GUILayout.Button("Save Convex Hulls"))
             {
-                SaveConvexHull();
+                SaveConvexHulls();
             }
 
             EditorGUI.EndDisabledGroup();
 
-            if (_sourceMesh != null && _previewConvexHull)
+            if (hasValidMesh && _previewConvexHull)
             {
                 if (GUILayout.Button("Update Preview"))
                 {
@@ -94,7 +100,7 @@ namespace Jih.Unity.Infrastructure.Editor.Geometries
                 }
             }
 
-            if (_previewObject != null)
+            if (_previewRoot != null)
             {
                 if (GUILayout.Button("Clear Preview"))
                 {
@@ -102,259 +108,242 @@ namespace Jih.Unity.Infrastructure.Editor.Geometries
                 }
             }
 
-            if (_showEfficiencyStats)
-            {
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Mesh Efficiency Statistics", EditorStyles.boldLabel);
+            DrawEfficiencyStatsList();
 
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-                EditorGUILayout.LabelField("Original Mesh:", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField($"Vertices: {_originalVertexCount}");
-                EditorGUILayout.LabelField($"Triangles: {_originalTriangleCount}");
-
-                EditorGUILayout.Space();
-
-                EditorGUILayout.LabelField("Convex Hull:", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField($"Vertices: {_hullVertexCount}");
-                EditorGUILayout.LabelField($"Triangles: {_hullTriangleCount}");
-
-                EditorGUILayout.Space();
-
-                EditorGUILayout.LabelField("Efficiency:", EditorStyles.boldLabel);
-
-                GUIStyle vertexStyle = new(EditorStyles.label);
-                vertexStyle.normal.textColor = GetEfficiencyColor(_vertexReductionPercent);
-                GUIStyle triangleStyle = new(EditorStyles.label);
-                triangleStyle.normal.textColor = GetEfficiencyColor(_triangleReductionPercent);
-
-                EditorGUILayout.LabelField($"Vertex Reduction: {_vertexReductionPercent:F2}%", vertexStyle);
-                EditorGUILayout.LabelField($"Triangle Reduction: {_triangleReductionPercent:F2}%", triangleStyle);
-
-                string efficiencySummary = GetEfficiencySummary();
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Summary:", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(efficiencySummary, EditorStyles.wordWrappedLabel);
-
-                EditorGUILayout.EndVertical();
-            }
+            EditorGUILayout.EndScrollView();
         }
 
-        void BrowseSavePath()
+        void DrawEfficiencyStatsList()
         {
-            string initialDir = System.IO.Path.GetDirectoryName(_savePath);
-            string fileName = System.IO.Path.GetFileNameWithoutExtension(_savePath);
-
-            if (string.IsNullOrEmpty(initialDir) || !initialDir.StartsWith("Assets"))
-            {
-                initialDir = "Assets";
-            }
-
-            if (string.IsNullOrEmpty(fileName))
-            {
-                fileName = "ConvexHull";
-            }
-
-            string path = EditorUtility.SaveFilePanelInProject("Save Convex Hull", fileName, "asset", "Select location to save the convex hull asset", initialDir);
-
-            if (!string.IsNullOrEmpty(path))
-            {
-                _savePath = path;
-            }
-        }
-
-        void SaveConvexHull()
-        {
-            if (_sourceMesh == null)
+            if (!_showStats || _stats.Count == 0)
             {
                 return;
             }
 
-            if (string.IsNullOrEmpty(_savePath) || !_savePath.StartsWith("Assets"))
-            {
-                BrowseSavePath();
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Efficiency Statistics", EditorStyles.boldLabel);
 
-                if (string.IsNullOrEmpty(_savePath) || !_savePath.StartsWith("Assets"))
+            foreach (var stats in _stats)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+                EditorGUILayout.LabelField($"Target: {stats.MeshName}", EditorStyles.boldLabel);
+
+                EditorGUILayout.BeginHorizontal();
+
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.LabelField("Original", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField($"Verts: {stats.OriginalVertices}");
+                EditorGUILayout.LabelField($"Tris: {stats.OriginalTriangles}");
+                EditorGUILayout.EndVertical();
+
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.LabelField("Convex Hull", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField($"Verts: {stats.HullVertices}");
+                EditorGUILayout.LabelField($"Tris: {stats.HullTriangles}");
+                EditorGUILayout.EndVertical();
+
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.LabelField("Efficiency", EditorStyles.miniBoldLabel);
+
+                GUIStyle vStyle = new(EditorStyles.label) { normal = { textColor = GetEfficiencyColor(stats.VertexReduction), }, };
+                GUIStyle tStyle = new(EditorStyles.label) { normal = { textColor = GetEfficiencyColor(stats.TriangleReduction), }, };
+
+                EditorGUILayout.LabelField($"-{stats.VertexReduction:F1}% (V)", vStyle);
+                EditorGUILayout.LabelField($"-{stats.TriangleReduction:F1}% (T)", tStyle);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(2);
+            }
+        }
+
+        void BrowseSaveDirectory()
+        {
+            string path = EditorUtility.OpenFolderPanel("Select Save Directory", _saveDirectory, "");
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            if (!path.StartsWith(Application.dataPath))
+            {
+                Debug.LogWarning("Save directory must be inside the project's Assets folder.");
+                return;
+            }
+
+            _saveDirectory = "Assets" + path[Application.dataPath.Length..];
+        }
+
+        void SaveConvexHulls()
+        {
+            if (!Directory.Exists(_saveDirectory))
+            {
+                Directory.CreateDirectory(_saveDirectory);
+            }
+
+            ResetStats();
+
+            for (int i = 0; i < _sourceMeshes.Count; i++)
+            {
+                Mesh? mesh = _sourceMeshes[i];
+                if (mesh == null)
                 {
-                    Debug.LogWarning("Save canceled: Invalid save path");
-                    return;
+                    continue;
                 }
+
+                EditorUtility.DisplayProgressBar("Generating", $"Processing {mesh.name}", (float)i / _sourceMeshes.Count);
+
+                GenerateHull(mesh.vertices, out List<Vector3> hullVertices, out List<int> hullTriangles);
+
+                _stats.Add(CreateStats(mesh, hullVertices, hullTriangles));
+
+                SerializableMesh serializableMesh = CreateInstance<SerializableMesh>();
+                SetSerializableMeshData(serializableMesh, hullVertices, hullTriangles);
+
+                string savePath = Path.Combine(_saveDirectory, string.Format(_fileNameFormat, mesh.name) + ".asset").Replace("\\", "/");
+                AssetDatabase.CreateAsset(serializableMesh, savePath);
+
+                Debug.Log("Saved: " + savePath);
             }
 
-            _originalVertexCount = _sourceMesh.vertexCount;
-            _originalTriangleCount = _sourceMesh.triangles.Length / 3;
-
-            Vector3[] vertices = _sourceMesh.vertices;
-            GenerateHull(vertices, out List<Vector3> hullVertices, out List<int> hullTriangles);
-
-            _hullVertexCount = hullVertices.Count;
-            _hullTriangleCount = hullTriangles.Count / 3;
-
-            _vertexReductionPercent = 100f * (1f - (float)_hullVertexCount / _originalVertexCount);
-            _triangleReductionPercent = 100f * (1f - (float)_hullTriangleCount / _originalTriangleCount);
-
-            _showEfficiencyStats = true;
-
-            SerializableMesh serializableMesh = CreateInstance<SerializableMesh>();
-            SetSerializableMeshData(serializableMesh, hullVertices, hullTriangles);
-
-            string directory = System.IO.Path.GetDirectoryName(_savePath);
-            if (!string.IsNullOrEmpty(directory) && !System.IO.Directory.Exists(directory))
-            {
-                System.IO.Directory.CreateDirectory(directory);
-            }
-
-            if (System.IO.File.Exists(_savePath))
-            {
-                bool overwrite = EditorUtility.DisplayDialog(
-                    "File Already Exists",
-                    "The file already exists. Do you want to overwrite it?",
-                    "Overwrite",
-                    "Cancel"
-                );
-
-                if (!overwrite)
-                {
-                    Debug.Log("Save canceled: File already exists");
-                    return;
-                }
-            }
-
-            AssetDatabase.CreateAsset(serializableMesh, _savePath);
+            EditorUtility.ClearProgressBar();
             AssetDatabase.SaveAssets();
-
-            EditorUtility.FocusProjectWindow();
-            Selection.activeObject = serializableMesh;
-
-            Debug.Log($"Convex hull generated and saved to {_savePath}\n" +
-                      $"Original Mesh: {_originalVertexCount} vertices, {_originalTriangleCount} triangles\n" +
-                      $"Convex Hull: {_hullVertexCount} vertices, {_hullTriangleCount} triangles\n" +
-                      $"Vertex Reduction: {_vertexReductionPercent:F2}%, Triangle Reduction: {_triangleReductionPercent:F2}%");
+            _showStats = true;
 
             if (_previewConvexHull)
             {
-                UpdatePreview(hullVertices, hullTriangles);
+                UpdatePreview();
             }
+        }
+
+        static Stats CreateStats(Mesh source, IReadOnlyList<Vector3> hullVertices, IReadOnlyList<int> hullTriangles)
+        {
+            int originalV = source.vertexCount;
+            int originalT = source.triangles.Length / 3;
+            int hullV = hullVertices.Count;
+            int hullT = hullTriangles.Count / 3;
+
+            return new Stats(source.name, originalV, originalT, hullV, hullT,
+                100f * (1f - (float)hullV / originalV),
+                100f * (1f - (float)hullT / originalT));
+        }
+
+        void UpdatePreview()
+        {
+            DestroyPreview();
+            ResetStats();
+
+            if (_sourceMeshes.Count <= 0)
+            {
+                return;
+            }
+
+            _previewRoot = new GameObject("ConvexHull_Preview_Root") { hideFlags = HideFlags.DontSave, };
+
+            foreach (var mesh in _sourceMeshes)
+            {
+                if (mesh == null)
+                {
+                    continue;
+                }
+
+                GenerateHull(mesh.vertices, out List<Vector3> hullVertices, out List<int> hullTriangles);
+                _stats.Add(CreateStats(mesh, hullVertices, hullTriangles));
+
+                string previewName = $"Preview_{mesh.name}";
+
+                Mesh previewMesh = new() { name = previewName, };
+                previewMesh.SetVertices(hullVertices);
+                previewMesh.SetTriangles(hullTriangles, 0);
+                previewMesh.RecalculateNormals();
+
+                {
+                    GameObject gameObject = new(previewName);
+                    gameObject.transform.SetParent(_previewRoot.transform, false);
+
+                    MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
+                    meshFilter.sharedMesh = previewMesh;
+
+                    MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+                    meshRenderer.sharedMaterial = _convexHullPreviewMaterial;
+                }
+                {
+                    GameObject gameObject = new($"Source_{mesh.name}");
+                    gameObject.transform.SetParent(_previewRoot.transform, false);
+
+                    MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
+                    meshFilter.sharedMesh = mesh;
+
+                    MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+                    meshRenderer.sharedMaterial = _sourceMeshPreviewMaterial;
+                }
+            }
+
+            _showStats = true;
+            if (SceneView.lastActiveSceneView != null) SceneView.lastActiveSceneView.Repaint();
         }
 
         void SetSerializableMeshData(SerializableMesh mesh, List<Vector3> vertices, List<int> triangles)
         {
             mesh.SetVertices(vertices);
-
             SerializableSubMesh subMesh = new();
             subMesh.SetIndices(triangles);
-
             mesh.SetSubMeshes(subMesh);
         }
 
-        void UpdatePreview()
+        static Color GetEfficiencyColor(float reduction)
         {
-            if (_sourceMesh == null)
-            {
-                return;
-            }
-
-            _originalVertexCount = _sourceMesh.vertexCount;
-            _originalTriangleCount = _sourceMesh.triangles.Length / 3;
-
-            Vector3[] vertices = _sourceMesh.vertices;
-            GenerateHull(vertices, out List<Vector3> hullVertices, out List<int> hullTriangles);
-
-            _hullVertexCount = hullVertices.Count;
-            _hullTriangleCount = hullTriangles.Count / 3;
-
-            _vertexReductionPercent = 100f * (1f - (float)_hullVertexCount / _originalVertexCount);
-            _triangleReductionPercent = 100f * (1f - (float)_hullTriangleCount / _originalTriangleCount);
-
-            _showEfficiencyStats = true;
-
-            UpdatePreview(hullVertices, hullTriangles);
-        }
-
-        void UpdatePreview(List<Vector3> vertices, List<int> triangles)
-        {
-            DestroyPreview();
-
-            _previewObject = new GameObject("ConvexHull_Preview")
-            {
-                hideFlags = HideFlags.HideAndDontSave,
-            };
-            Undo.RegisterCreatedObjectUndo(_previewObject, "Convex Hull Preview");
-
-            MeshFilter meshFilter = _previewObject.AddComponent<MeshFilter>();
-            MeshRenderer meshRenderer = _previewObject.AddComponent<MeshRenderer>();
-
-            Mesh previewMesh = new();
-            previewMesh.SetVertices(vertices);
-            previewMesh.SetTriangles(triangles, 0);
-            previewMesh.RecalculateNormals();
-
-            meshFilter.sharedMesh = previewMesh;
-            meshRenderer.sharedMaterial = _previewMaterial;
-
-            SceneView.lastActiveSceneView.Repaint();
-        }
-
-        static Color GetEfficiencyColor(float reductionPercent)
-        {
-            if (reductionPercent >= 90f)
+            if (reduction >= 90f)
             {
                 return Color.green;
             }
-            else if (reductionPercent >= 70f)
+            if (reduction >= 70f)
             {
-                return Color.Lerp(Color.yellow, Color.green, (reductionPercent - 70f) / 20f);
+                return Color.Lerp(Color.yellow, Color.green, (reduction - 70f) / 20f);
             }
-            else if (reductionPercent >= 30f)
+            if (reduction >= 30f)
             {
-                return Color.Lerp(Color.red, Color.yellow, (reductionPercent - 30f) / 40f);
+                return Color.Lerp(Color.red, Color.yellow, (reduction - 30f) / 40f);
             }
-            else
-            {
-                return Color.red;
-            }
-        }
-
-        string GetEfficiencySummary()
-        {
-            float avgReduction = (_vertexReductionPercent + _triangleReductionPercent) / 2;
-
-            if (avgReduction >= 90f)
-            {
-                return "Excellent optimization! The convex hull provides a very efficient simplification of the original mesh.";
-            }
-            else if (avgReduction >= 70f)
-            {
-                return "Good optimization. The convex hull significantly reduces complexity while maintaining shape.";
-            }
-            else if (avgReduction >= 50f)
-            {
-                return "Moderate optimization. The convex hull provides a reasonable simplification.";
-            }
-            else if (avgReduction >= 30f)
-            {
-                return "Low optimization. The convex hull provides minimal simplification.";
-            }
-            else
-            {
-                return "Minimal optimization. The original mesh may already be close to convex or has unique features that prevent significant simplification.";
-            }
+            return Color.red;
         }
 
         void ResetStats()
         {
-            _originalVertexCount = _originalTriangleCount = 0;
-            _hullVertexCount = _hullTriangleCount = 0;
-            _vertexReductionPercent = _triangleReductionPercent = 0;
-            _showEfficiencyStats = false;
+            _stats.Clear();
+            _showStats = false;
         }
 
         void DestroyPreview()
         {
-            if (_previewObject != null)
+            if (_previewRoot != null)
             {
-                DestroyImmediate(_previewObject);
-                _previewObject = null;
+                DestroyImmediate(_previewRoot);
+                _previewRoot = null;
+            }
+        }
+
+        struct Stats
+        {
+            public string MeshName;
+            public int OriginalVertices;
+            public int OriginalTriangles;
+            public int HullVertices;
+            public int HullTriangles;
+            public float VertexReduction;
+            public float TriangleReduction;
+
+            public Stats(string meshName, int originalVertices, int originalTriangles, int hullVertices, int hullTriangles, float vertexReduction, float triangleReduction)
+            {
+                MeshName = meshName;
+                OriginalVertices = originalVertices;
+                OriginalTriangles = originalTriangles;
+                HullVertices = hullVertices;
+                HullTriangles = hullTriangles;
+                VertexReduction = vertexReduction;
+                TriangleReduction = triangleReduction;
             }
         }
     }

@@ -12,6 +12,7 @@ using Jih.Unity.Infrastructure.Editor.Geometries;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Jih.Unity.EraOfNitrogen.Editor
 {
@@ -23,17 +24,41 @@ namespace Jih.Unity.EraOfNitrogen.Editor
             GetWindow<ConvexHullGeneratorWindow>("Convex Hull Generator");
         }
 
-        protected override Material CreatePreviewMaterial()
+        protected override void CreatePreviewMaterials(out Material convexHullPreviewMaterial, out Material sourceMeshPreviewMaterial)
         {
             Shader? shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null)
             {
                 Debug.LogWarning("Preview shader not found.", this);
             }
-            return new Material(shader)
+
             {
-                color = new Color(0.0f, 0.8f, 0.2f, 0.5f),
-            };
+                Material material = new(shader)
+                {
+                    color = new Color(0f, 0.8f, 0.2f, 0.5f),
+                };
+                material.SetFloat("_Surface", 1f);
+                material.SetFloat("_Blend", 0f);
+                material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                material.SetFloat("_ZWrite", 0f);
+
+                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+
+                material.renderQueue = (int)RenderQueue.Transparent;
+                material.SetOverrideTag("RenderType", "Transparent");
+
+                convexHullPreviewMaterial = material;
+            }
+            {
+                Material material = new(shader)
+                {
+                    color = new Color(0f, 0.2f, 0.8f),
+                };
+
+                sourceMeshPreviewMaterial = material;
+            }
         }
 
         protected override void GenerateHull(Vector3[] points, out List<Vector3> hullVertices, out List<int> hullTriangles)

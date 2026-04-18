@@ -31,11 +31,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonIgnore] public int RandomSeed => Map.RandomSeed;
         [JsonProperty] public long RandomPosition { get; private set; }
 
+        [JsonProperty(nameof(Tiles))] readonly List<Tile> _tiles = new();
+        [JsonIgnore] public IReadOnlyList<Tile> Tiles => _tiles;
+
         [JsonProperty(nameof(Provinces))] readonly List<Province> _provinces = new();
         [JsonIgnore] public IReadOnlyList<Province> Provinces => _provinces;
-
-        [JsonProperty(nameof(OceanTiles))] readonly List<Tile> _oceanTiles = new();
-        [JsonIgnore] public IReadOnlyList<Tile> OceanTiles => _oceanTiles;
 
         [JsonIgnore, MemberNotNullWhen(true,
             nameof(_randomStream),
@@ -57,13 +57,31 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         {
         }
 
-        public void Bind(Map map)
+        public void Bind(Map map, bool initialBind)
         {
             _map = map;
 
             RandomPosition = 0;
 
-            if (_provinces.Count <= 0)
+            if (initialBind)
+            {
+                for (int i = 0; i < map.Tiles.Count; i++)
+                {
+                    _tiles.Add(new Tile());
+                }
+            }
+            Dictionary<TileCoord, Tile> tilesMap = new(map.Tiles.Count);
+            for (int i = 0; i < map.Tiles.Count; i++)
+            {
+                MapTile srcTile = map.Tiles[i];
+                Tile destTile = _tiles[i];
+                // 타일들에 대한 바인딩 일괄 진행.
+                destTile.Bind(srcTile, initialBind);
+
+                tilesMap.Add(srcTile.Coord, destTile);
+            }
+
+            if (initialBind)
             {
                 for (int i = 0; i < map.Provinces.Count; i++)
                 {
@@ -72,19 +90,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             }
             for (int i = 0; i < map.Provinces.Count; i++)
             {
-                _provinces[i].Bind(map.Provinces[i]);
-            }
-
-            if (_oceanTiles.Count <= 0)
-            {
-                for (int i = 0; i < map.OceanTiles.Count; i++)
-                {
-                    _oceanTiles.Add(new Tile());
-                }
-            }
-            for (int i = 0; i < map.OceanTiles.Count; i++)
-            {
-                _oceanTiles[i].Bind(map.OceanTiles[i]);
+                _provinces[i].Bind(map.Provinces[i], tilesMap, initialBind);
             }
         }
 
@@ -110,50 +116,26 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             }
 
             Tile[,] tiles = new Tile[Height, Width];
-            foreach (var province in _provinces)
+            foreach (var tile in _tiles)
             {
-                foreach (var provinceTile in province.Tiles)
-                {
-                    HexaCoord coord = provinceTile.Coord;
-                    HexaIndex index = (HexaIndex)coord;
-
-                    ref Tile tile = ref tiles[index.Y, index.X];
-                    if (tile is not null)
-                    {
-                        throw new InvalidOperationException($"{coord}에서 프로빈스 타일이 중복됨.");
-                    }
-
-                    tile = provinceTile;
-                }
-            }
-            foreach (var oceanTile in _oceanTiles)
-            {
-                HexaCoord coord = oceanTile.Coord;
-                HexaIndex index = (HexaIndex)coord;
-
-                ref Tile tile = ref tiles[index.Y, index.X];
-                if (tile is not null)
-                {
-                    throw new InvalidOperationException($"{coord}에서 바다 타일이 중복됨.");
-                }
-
-                tile = oceanTile;
+                HexaIndex index = (HexaIndex)tile.Coord;
+                tiles[index.Y, index.X] = tile;
             }
 
             _worldGrid = new WorldGrid(Width, Height, tiles);
 
             foreach (var province in _provinces)
             {
-                foreach (var provinceTile in province.Tiles)
-                {
-                    provinceTile.Initialize(this, province, _worldGrid[(HexaIndex)(HexaCoord)provinceTile.Coord]);
-                }
-
-                province.Initialize(this, provinceMap);
+                province.Initialize(this, provinceMap, _worldGrid);
             }
-            foreach (var oceanTile in _oceanTiles)
+
+            foreach (var tile in _tiles)
             {
-                oceanTile.Initialize(this, null, _worldGrid[(HexaIndex)(HexaCoord)oceanTile.Coord]);
+                if (tile.IsInitialized)
+                {
+                    continue;
+                }
+                tile.Initialize(this, null, _worldGrid[tile.Coord]);
             }
 
             IsInitialized = true;

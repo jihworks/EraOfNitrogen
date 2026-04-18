@@ -9,6 +9,7 @@
 
 using Jih.Unity.EraOfNitrogen.Worlds.Runtime;
 using Jih.Unity.Infrastructure;
+using Jih.Unity.Infrastructure.HexaGrid;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonIgnore] MapTile? _mapTile;
         [JsonIgnore] MapTile MapTile => _mapTile.ThrowIfNull(nameof(MapTile));
 
-        [JsonIgnore] public TileCoord Coord => MapTile.Coord;
+        [JsonIgnore] public HexaCoord Coord { get; private set; }
 
         /// <summary>
         /// 땅 아니면 바다.
@@ -52,7 +53,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonIgnore] World? _world;
         [JsonIgnore] public World World => _world.ThrowIfNull(nameof(World));
         /// <summary>
-        /// 바다인 경우 <c>null</c>.
+        /// 공해인 경우 <c>null</c>.
         /// </summary>
         [JsonIgnore] public Province? Province { get; private set; }
 
@@ -67,11 +68,13 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         {
         }
 
-        public void Bind(MapTile mapTile)
+        public void Bind(MapTile mapTile, bool initialBind)
         {
             _mapTile = mapTile;
 
-            if (_doodads.Count <= 0)
+            Coord = mapTile.Coord;
+
+            if (initialBind)
             {
                 for (int i = 0; i < mapTile.Doodads.Count; i++)
                 {
@@ -80,7 +83,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             }
             for (int i = 0; i < mapTile.Doodads.Count; i++)
             {
-                _doodads[i].Bind(mapTile.Doodads[i]);
+                _doodads[i].Bind(mapTile.Doodads[i], initialBind);
             }
         }
 
@@ -93,10 +96,6 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
 
             _world = world;
 
-            if (province is not null && !IsLand)
-            {
-                throw new InvalidOperationException("타일에 프로빈스가 할당되지만 땅이 아님.");
-            }
             Province = province;
 
             _cell = cell;

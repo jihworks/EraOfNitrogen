@@ -22,6 +22,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             RandomStream random = new(seed ?? Environment.TickCount);
 
             UnityEngine.Debug.Log("== 맵 생성 시작");
+            UnityEngine.Debug.Log("맵 시드:" + random.Seed);
 
             System.Diagnostics.Stopwatch stopwatch = new();
             stopwatch.Start();
@@ -45,10 +46,9 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             List<GeneratorCell> landCells = pangaeaGenerator.ResultLandCells;
             List<GeneratorCell> oceanCells = pangaeaGenerator.ResultOceanCells;
 
-            ProvinceGenerator provinceGenerator = new(ProvinceGenerator.Settings.Default, random, landCells);
+            ProvinceGenerator provinceGenerator = new(ProvinceGenerator.Settings.Default, random, grid, landCells);
             provinceGenerator.Execute();
-            if (provinceGenerator.ResultCityCells is null ||
-                provinceGenerator.ResultProvinces is null)
+            if (provinceGenerator.ResultProvinces is null)
             {
                 throw new InvalidOperationException("프로빈스 생성 실패.");
             }
@@ -56,7 +56,6 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             UnityEngine.Debug.Log($"프로빈스 생성: {stopwatch.ElapsedMilliseconds}ms");
             stopwatch.Restart();
 
-            //List<GeneratorCell> cityCells = provinceGenerator.ResultCityCells;
             List<GeneratorProvince> provinces = provinceGenerator.ResultProvinces;
 
             BiomeGenerator biomeGenerator = new(BiomeGenerator.Settings.Default, random, provinces);
@@ -77,7 +76,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             UnityEngine.Debug.Log($"도로 생성: {stopwatch.ElapsedMilliseconds}ms");
             stopwatch.Restart();
 
-            ResultMap = new Map(grid, random.Seed, provinces, oceanCells);
+            ResultMap = new Map(grid, random.Seed, provinces);
             stopwatch.Stop();
             UnityEngine.Debug.Log($"인스턴스 생성: {stopwatch.ElapsedMilliseconds}ms");
 

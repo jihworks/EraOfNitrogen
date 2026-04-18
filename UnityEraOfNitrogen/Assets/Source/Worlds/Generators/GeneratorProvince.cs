@@ -19,10 +19,13 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
         public uint Id { get; }
 
         public GeneratorCell CityCell { get; }
+        public GeneratorCell? PortCell { get; set; }
+
         /// <summary>
-        /// <see cref="CityCell"/> 포함.
+        /// <see cref="CityCell"/>, <see cref="PortCell"/> 포함.
         /// </summary>
-        public List<GeneratorCell> Cells { get; } = new();
+        public List<GeneratorCell> LandCells { get; } = new();
+        public List<GeneratorCell> OceanCells { get; } = new();
 
         public List<GeneratorProvince> AdjacentProvinces { get; } = new();
         public List<GeneratorProvince> ConnectedProvinces { get; } = new();

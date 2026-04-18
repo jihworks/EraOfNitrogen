@@ -34,10 +34,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                 province.CityCell.HasRoad = true;
             }
 
-            Connect(_grid, _provinces);
+            ConnectCities(_grid, _provinces);
+            ConnectPorts(_grid, _provinces);
         }
 
-        static void Connect(GeneratorGrid mapGrid, IReadOnlyList<GeneratorProvince> provinces)
+        static void ConnectCities(GeneratorGrid grid, IReadOnlyList<GeneratorProvince> provinces)
         {
             if (provinces.Count < 2)
             {
@@ -46,7 +47,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
             HashSet<ProvincePair> processed = new(provinces.Sum(p => p.AdjacentProvinces.Count));
 
-            Context context = new();
+            CityContext context = new();
             HexaPathResult result = new();
             foreach (var province in provinces)
             {
@@ -61,7 +62,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                     context.Reset(province, adjacent);
 
                     GeneratorCell start = province.CityCell, goal = adjacent.CityCell;
-                    mapGrid.FindPath(start, goal, result, context.Access, context.Cost, context.Heuristic);
+                    grid.FindPath(start, goal, result, context.Access, context.Cost, context.Heuristic);
 
                     if (!result.IsSucceed)
                     {
@@ -75,6 +76,33 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
                     province.ConnectedProvinces.Add(adjacent);
                     adjacent.ConnectedProvinces.Add(province);
+                }
+            }
+        }
+
+        static void ConnectPorts(GeneratorGrid grid, IReadOnlyList<GeneratorProvince> provinces)
+        {
+            PortContext context = new();
+            HexaPathResult result = new();
+            foreach (var province in provinces)
+            {
+                GeneratorCell? portCell = province.PortCell;
+                if (portCell is null)
+                {
+                    continue;
+                }
+
+                context.Reset(province);
+                grid.FindPath(province.CityCell, portCell, result, context.Access, context.Cost, context.Heuristic);
+
+                if (!result.IsSucceed)
+                {
+                    throw new InvalidOperationException($"프로빈스 {province.Id}의 항구에 도로를 연결할 수 없음.");
+                }
+
+                foreach (var roadCell in result.ResultPath.Cast<GeneratorCell>())
+                {
+                    roadCell.HasRoad = true;
                 }
             }
         }
@@ -105,24 +133,8 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             }
         }
 
-        class Context
+        abstract class BaseContext
         {
-            public GeneratorProvince? Province0 { get; private set; }
-            public GeneratorProvince? Province1 { get; private set; }
-
-            public void Reset(GeneratorProvince province0, GeneratorProvince province1)
-            {
-                Province0 = province0;
-                Province1 = province1;
-            }
-
-            public IEnumerable<HexaCell> Access(HexaCell current)
-            {
-                return current.EnumerateNeighbors()
-                    .Cast<GeneratorCell>()
-                    .Where(c => c.IsLand && (c.Province == Province0 || c.Province == Province1));
-            }
-
             public int Cost(HexaCell /*current*/_0, HexaCell next)
             {
                 GeneratorCell nextCell = (GeneratorCell)next;
@@ -165,6 +177,42 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                 int distance = HexaCoord.Distance(goal.Coord, next.Coord);
                 distance *= 20;
                 return distance;
+            }
+        }
+
+        class CityContext : BaseContext
+        {
+            public GeneratorProvince? Province0 { get; private set; }
+            public GeneratorProvince? Province1 { get; private set; }
+
+            public void Reset(GeneratorProvince province0, GeneratorProvince province1)
+            {
+                Province0 = province0;
+                Province1 = province1;
+            }
+
+            public IEnumerable<HexaCell> Access(HexaCell current)
+            {
+                return current.EnumerateNeighbors()
+                    .Cast<GeneratorCell>()
+                    .Where(c => c.IsLand && (c.Province == Province0 || c.Province == Province1));
+            }
+        }
+
+        class PortContext : BaseContext
+        {
+            public GeneratorProvince? Province { get; private set; }
+
+            public void Reset(GeneratorProvince province)
+            {
+                Province = province;
+            }
+
+            public IEnumerable<HexaCell> Access(HexaCell current)
+            {
+                return current.EnumerateNeighbors()
+                    .Cast<GeneratorCell>()
+                    .Where(c => c.IsLand && c.Province == Province);
             }
         }
 

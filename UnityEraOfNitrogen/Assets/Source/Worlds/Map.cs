@@ -8,6 +8,7 @@
 #nullable enable
 
 using Jih.Unity.EraOfNitrogen.Worlds.Generators;
+using Jih.Unity.Infrastructure.HexaGrid;
 using Jih.Unity.Infrastructure.Json;
 using Newtonsoft.Json;
 using System;
@@ -23,37 +24,46 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonProperty] public int Height { get; private set; }
         [JsonProperty] public int RandomSeed { get; private set; }
 
+        [JsonProperty(nameof(Tiles))] readonly List<MapTile> _tiles;
+        [JsonIgnore] public IReadOnlyList<MapTile> Tiles => _tiles;
+
         [JsonProperty(nameof(Provinces))] readonly List<MapProvince> _provinces;
         [JsonIgnore] public IReadOnlyList<MapProvince> Provinces => _provinces;
-
-        [JsonProperty(nameof(OceanTiles))] readonly List<MapTile> _oceanTiles;
-        [JsonIgnore] public IReadOnlyList<MapTile> OceanTiles => _oceanTiles;
 
         [JsonConstructor]
         private Map()
         {
+            _tiles = null!;
             _provinces = null!;
-            _oceanTiles = null!;
         }
 
-        public Map(GeneratorGrid generatorGrid, int mapSeed, IReadOnlyList<GeneratorProvince> generatorProvinces, IReadOnlyList<GeneratorCell> generatorOceanCells)
+        public Map(GeneratorGrid generatorGrid, int mapSeed, IReadOnlyList<GeneratorProvince> generatorProvinces)
         {
             Width = generatorGrid.Width;
             Height = generatorGrid.Height;
             RandomSeed = mapSeed;
 
+            _tiles = new List<MapTile>(Width * Height);
+            Dictionary<HexaCoord, MapTile> tilesMap = new(Width * Height);
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    HexaIndex index = new(x, y);
+                    
+                    GeneratorCell cell = (GeneratorCell)generatorGrid[index];
+                    MapTile tile = new(cell);
+
+                    _tiles.Add(tile);
+                    tilesMap.Add((HexaCoord)index, tile);
+                }
+            }
+
             _provinces = new List<MapProvince>(generatorProvinces.Count);
             foreach (var generatorProvince in generatorProvinces)
             {
-                MapProvince province = new(generatorProvince);
+                MapProvince province = new(generatorProvince, tilesMap);
                 _provinces.Add(province);
-            }
-
-            _oceanTiles = new List<MapTile>(generatorOceanCells.Count);
-            foreach (var generatorCell in generatorOceanCells)
-            {
-                MapTile oceanTile = new(generatorCell);
-                _oceanTiles.Add(oceanTile);
             }
         }
     }
@@ -64,12 +74,16 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonProperty] public uint Id { get; private set; }
         [JsonProperty] public Biome Biome { get; private set; }
         [JsonProperty] public MapTile CityTile { get; private set; }
+        [JsonProperty] public MapTile? PortTile { get; private set; }
 
-        [JsonProperty(nameof(Tiles))] readonly List<MapTile> _tiles;
+        [JsonProperty(nameof(LandTiles))] readonly List<MapTile> _landTiles;
         /// <summary>
-        /// <see cref="CityTile"/> 포함.
+        /// <see cref="CityTile"/>, <see cref="PortTile"/> 포함.
         /// </summary>
-        [JsonIgnore] public IReadOnlyList<MapTile> Tiles => _tiles;
+        [JsonIgnore] public IReadOnlyList<MapTile> LandTiles => _landTiles;
+
+        [JsonProperty(nameof(OceanTiles))] readonly List<MapTile> _oceanTiles;
+        [JsonIgnore] public IReadOnlyList<MapTile> OceanTiles => _oceanTiles;
 
         [JsonProperty(nameof(AdjacentProvinceIds))] readonly List<uint> _adjacentProvinceIds;
         [JsonIgnore] public IReadOnlyList<uint> AdjacentProvinceIds => _adjacentProvinceIds;
@@ -81,32 +95,29 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         private MapProvince()
         {
             CityTile = null!;
-            _tiles = null!;
+            _landTiles = null!;
+            _oceanTiles = null!;
             _adjacentProvinceIds = null!;
             _connectedProvinceIds = null!;
         }
 
-        public MapProvince(GeneratorProvince generatorProvince)
+        public MapProvince(GeneratorProvince generatorProvince, IReadOnlyDictionary<HexaCoord, MapTile> tilesMap)
         {
             Id = generatorProvince.Id;
 
             Biome = generatorProvince.Biome;
 
-            MapTile? cityTile = null;
-
-            _tiles = new(generatorProvince.Cells.Count);
-            foreach (var cell in generatorProvince.Cells)
+            CityTile = tilesMap[generatorProvince.CityCell.Coord];
+            if (generatorProvince.PortCell is not null)
             {
-                MapTile tile = new(cell);
-                _tiles.Add(tile);
-
-                if (cell == generatorProvince.CityCell)
-                {
-                    cityTile = tile;
-                }
+                PortTile = tilesMap[generatorProvince.PortCell.Coord];
             }
 
-            CityTile = cityTile ?? throw new InvalidOperationException("도시 셀이 프로빈스 셀 리스트에 없음.");
+            _landTiles = new(generatorProvince.LandCells.Count);
+            _landTiles.AddRange(generatorProvince.LandCells.Select(c => tilesMap[c.Coord]));
+
+            _oceanTiles = new(generatorProvince.OceanCells.Count);
+            _oceanTiles.AddRange(generatorProvince.OceanCells.Select(c => tilesMap[c.Coord]));
 
             List<GeneratorProvince> adjacentProvinces = generatorProvince.AdjacentProvinces;
             _adjacentProvinceIds = new(adjacentProvinces.Count);
@@ -146,10 +157,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             HasRoad = cell.HasRoad;
 
             _doodads = new List<MapDoodad>(cell.Doodads.Count);
-            foreach (var doodad in cell.Doodads)
-            {
-                _doodads.Add(new MapDoodad(doodad));
-            }
+            _doodads.AddRange(cell.Doodads.Select(d => new MapDoodad(d)));
         }
     }
 

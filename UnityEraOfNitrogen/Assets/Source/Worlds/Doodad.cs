@@ -44,7 +44,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         {
         }
 
-        public void Bind(MapDoodad mapDoodad)
+        public void Bind(MapDoodad mapDoodad, bool _0/*initialBind*/)
         {
             _mapDoodad = mapDoodad;
         }

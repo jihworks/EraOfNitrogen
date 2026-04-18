@@ -9,11 +9,12 @@
 
 using Jih.Unity.Infrastructure.HexaGrid;
 using Newtonsoft.Json;
+using System;
 
 namespace Jih.Unity.EraOfNitrogen.Worlds
 {
     [JsonObject]
-    public struct TileCoord
+    public struct TileCoord : IEquatable<TileCoord>
     {
         [JsonProperty] public int A;
         [JsonProperty] public int B;
@@ -24,6 +25,31 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
             A = a;
             B = b;
             C = c;
+        }
+
+        public readonly override bool Equals(object? obj)
+        {
+            return obj is TileCoord coord && Equals(coord);
+        }
+        public readonly bool Equals(TileCoord other)
+        {
+            return A == other.A &&
+                   B == other.B &&
+                   C == other.C;
+        }
+
+        public readonly override int GetHashCode()
+        {
+            return HashCode.Combine(A, B, C);
+        }
+
+        public static bool operator ==(TileCoord left, TileCoord right)
+        {
+            return left.Equals(right);
+        }
+        public static bool operator !=(TileCoord left, TileCoord right)
+        {
+            return !(left == right);
         }
 
         public static implicit operator TileCoord(HexaCoord coord)

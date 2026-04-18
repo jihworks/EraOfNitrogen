@@ -19,33 +19,36 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
     {
         readonly Settings _settings;
         readonly RandomStream _random;
+        readonly GeneratorGrid _grid;
         readonly IReadOnlyList<GeneratorCell> _landCells;
 
-        public List<GeneratorCell>? ResultCityCells { get; private set; }
         public List<GeneratorProvince>? ResultProvinces { get; private set; }
 
-        public ProvinceGenerator(Settings settings, RandomStream random, IReadOnlyList<GeneratorCell> landCells)
+        public ProvinceGenerator(Settings settings, RandomStream random, GeneratorGrid grid, IReadOnlyList<GeneratorCell> landCells)
         {
             _settings = settings;
             _random = random;
+            _grid = grid;
             _landCells = landCells;
         }
 
         public void Execute()
         {
-            List<GeneratorCell> cityCells = GenerateCapitals(_random, _landCells, _settings.MaxProvinceCount, _settings.MinCityDistance);
+            List<GeneratorCell> cityCells = GenerateCities(_random, _landCells, _settings.MaxProvinceCount, _settings.MinCityDistance);
             if (cityCells.Count <= 0)
             {
                 return;
             }
 
-            List<GeneratorProvince> provinces = GenerateProvinces(_landCells, cityCells);
+            List<GeneratorProvince> provinces = GenerateProvinces(_grid, cityCells);
+            
+            GeneratePorts(_random, _grid, provinces, _settings.MaxPortCount);
+            AllocateOceanCellsToPorts(_grid, provinces, _settings.MaxOceanPortDistance);
 
-            ResultCityCells = cityCells;
             ResultProvinces = provinces;
         }
 
-        static List<GeneratorCell> GenerateCapitals(RandomStream random, IReadOnlyList<GeneratorCell> landCells, int maxProvinceCountSetting, int minCityDistanceSetting)
+        static List<GeneratorCell> GenerateCities(RandomStream random, IReadOnlyList<GeneratorCell> landCells, int maxProvinceCountSetting, int minCityDistanceSetting)
         {
             List<GeneratorCell> result = new();
 
@@ -103,7 +106,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             return true;
         }
 
-        static List<GeneratorProvince> GenerateProvinces(IReadOnlyList<GeneratorCell> landCells, IReadOnlyList<GeneratorCell> cityCells)
+        static List<GeneratorProvince> GenerateProvinces(GeneratorGrid grid, IReadOnlyList<GeneratorCell> cityCells)
         {
             List<GeneratorProvince> result = new(cityCells.Count);
 
@@ -112,7 +115,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
             {
                 GeneratorProvince province = new(provinceId, cityCell);
 
-                province.Cells.Add(cityCell);
+                province.LandCells.Add(cityCell);
                 cityCell.Province = province;
 
                 result.Add(province);
@@ -120,21 +123,31 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
                 provinceId++;
             }
 
-            // 도시는 제외. 이미 처리됨.
-            foreach (var expandTarget in landCells.Where(l => !cityCells.Contains(l)))
             {
-                // 보로노이 알고리즘으로 전파.
-                GeneratorProvince province = FindNearestCapital(expandTarget, cityCells).Province ?? throw new InvalidOperationException();
+                HexaMultiAreasResult areaResult = new();
+                LandAreaContext areaContext = new();
 
-                expandTarget.Province = province;
-                province.Cells.Add(expandTarget);
+                grid.CollectMultiAreas(cityCells, areaResult, areaContext.Access, null);
+
+                foreach (var pair in areaResult.CellToStartingCells)
+                {
+                    if (cityCells.Contains(pair.Key))
+                    {
+                        continue;
+                    }
+
+                    GeneratorProvince province = ((GeneratorCell)pair.Value).Province ?? throw new InvalidOperationException();
+                    GeneratorCell cell = (GeneratorCell)pair.Key;
+                    cell.Province = province;
+                    province.LandCells.Add(cell);
+                }
             }
 
             foreach (var province in result)
             {
                 HashSet<GeneratorProvince> adjacentProvinces = new(result.Count);
 
-                foreach (var cell in province.Cells)
+                foreach (var cell in province.LandCells)
                 {
                     foreach (var neighbor in cell.EnumerateNeighbors())
                     {
@@ -152,38 +165,166 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
             return result;
         }
-
-        static GeneratorCell FindNearestCapital(GeneratorCell cell, IReadOnlyList<GeneratorCell> cityCells)
+        
+        static void GeneratePorts(RandomStream random, GeneratorGrid grid, IReadOnlyList<GeneratorProvince> provinces, int maxPortCountSetting)
         {
-            HexaCoord cellCoord = cell.Coord;
+            List<GeneratorProvince> candidates = new(provinces);
 
-            int nearestDistance = int.MaxValue;
-            GeneratorCell? nearestCity = null;
+            HexaPathResult pathResult = new();
+            PortPathContext pathContext = new();
 
-            foreach (var city in cityCells)
+            int count = 0;
+            while (candidates.Count > 0 && count < maxPortCountSetting)
             {
-                int distance = HexaCoord.Distance(cellCoord, city.Coord);
-                if (distance < nearestDistance)
+                int selectIndex = random.NextInt32(0, candidates.Count);
+                GeneratorProvince province = candidates[selectIndex];
+                candidates.RemoveAt(selectIndex);
+
+                GeneratorCell cityCell = province.CityCell;
+
+                List<(GeneratorCell Cell, int Distance, int PathLength)> coastlineCells = province.LandCells
+                    .Where(c => c.IsCoastlineLand)
+                    .Select(c => (c, HexaCoord.Distance(c.Coord, cityCell.Coord), -1/*유효하지 않은 초기값*/))
+                    .ToList();
+                if (coastlineCells.Count <= 0)
                 {
-                    nearestDistance = distance;
-                    nearestCity = city;
+                    continue;
                 }
+
+                pathContext.Reset(province);
+                for (int i = 0; i < coastlineCells.Count; i++)
+                {
+                    var (candidateCell, distance, _) = coastlineCells[i];
+
+                    grid.FindPath(cityCell, candidateCell, pathResult, pathContext.Access, null, null);
+
+                    if (pathResult.IsSucceed)
+                    {
+                        coastlineCells[i] = (candidateCell, distance, pathResult.ResultPath.Count);
+                    }
+                }
+
+                List<(GeneratorCell Cell, int Distance, int PathLength)> reachableCells = coastlineCells
+                    .Where(x => x.PathLength >= 0) // 음수는 유효하지 않은 값.
+                    .OrderBy(x => x.PathLength).ThenBy(x => x.Distance)
+                    .ToList();
+                if (reachableCells.Count <= 0)
+                {
+                    continue;
+                }
+
+                var (_, minDistance, minPathLength) = reachableCells[0];
+
+                List<(GeneratorCell Cell, int Distance, int PathLength)> minPathCells = reachableCells
+                    .Where(x => x.Distance == minDistance && x.PathLength == minPathLength)
+                    .ToList();
+
+                GeneratorCell portCell;
+                if (minPathCells.Count > 1)
+                {
+                    selectIndex = random.NextInt32(0, minPathCells.Count);
+                    portCell = minPathCells[selectIndex].Cell;
+                }
+                else
+                {
+                    portCell = minPathCells[0].Cell;
+                }
+
+                province.PortCell = portCell;
+                count++;
+            }
+        }
+
+        static void AllocateOceanCellsToPorts(GeneratorGrid grid, IReadOnlyList<GeneratorProvince> provinces, int maxOceanPortDistanceSetting)
+        {
+            List<GeneratorCell> portCells = provinces
+                .Where(p => p.PortCell is not null)
+                .Select(p => p.PortCell!)
+                .ToList();
+
+            HexaMultiAreasResult areaResult = new();
+            OceanAreaContext areaContext = new(maxOceanPortDistanceSetting);
+
+            grid.CollectMultiAreas(portCells, areaResult, areaContext.Access, areaContext.Expand);
+
+            foreach (var pair in areaResult.CellToStartingCells)
+            {
+                if (portCells.Contains(pair.Key))
+                {
+                    continue;
+                }
+
+                GeneratorProvince province = ((GeneratorCell)pair.Value).Province ?? throw new InvalidOperationException();
+                GeneratorCell cell = (GeneratorCell)pair.Key;
+                cell.Province = province;
+                province.OceanCells.Add(cell);
+            }
+        }
+
+        class LandAreaContext
+        {
+            public IEnumerable<HexaCell> Access(HexaCell _0/*start*/, HexaCell current)
+            {
+                return current.EnumerateNeighbors()
+                    .Cast<GeneratorCell>()
+                    .Where(c => c.IsLand);
+            }
+        }
+
+        class PortPathContext
+        {
+            public GeneratorProvince? Province { get; private set; }
+
+            public void Reset(GeneratorProvince province)
+            {
+                Province = province;
             }
 
-            return nearestCity ?? throw new InvalidOperationException();
+            public IEnumerable<HexaCell> Access(HexaCell current)
+            {
+                return current.EnumerateNeighbors()
+                    .Cast<GeneratorCell>()
+                    .Where(c => c.IsLand && c.Province == Province);
+            }
+        }
+
+        class OceanAreaContext
+        {
+            public int MaxDistance { get; private set; }
+
+            public OceanAreaContext(int maxDistance)
+            {
+                MaxDistance = maxDistance;
+            }
+
+            public IEnumerable<HexaCell> Access(HexaCell _0/*start*/, HexaCell current)
+            {
+                return current.EnumerateNeighbors()
+                    .Cast<GeneratorCell>()
+                    .Where(c => !c.IsLand);
+            }
+
+            public bool Expand(HexaCell start, HexaCell _0/*current*/, HexaCell next)
+            {
+                return HexaCoord.Distance(start.Coord, next.Coord) <= MaxDistance;
+            }
         }
 
         public struct Settings
         {
-            public static Settings Default => new(4, 128);
+            public static Settings Default => new(4, 128, 32, 4);
 
             public int MinCityDistance;
             public int MaxProvinceCount;
+            public int MaxPortCount;
+            public int MaxOceanPortDistance;
 
-            public Settings(int minCityDistance, int maxProvinceCount)
+            public Settings(int minCityDistance, int maxProvinceCount, int maxPortCount, int maxOceanPortDistance)
             {
                 MinCityDistance = minCityDistance;
                 MaxProvinceCount = maxProvinceCount;
+                MaxPortCount = maxPortCount;
+                MaxOceanPortDistance = maxOceanPortDistance;
             }
         }
     }

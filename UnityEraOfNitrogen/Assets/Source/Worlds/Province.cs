@@ -9,6 +9,7 @@
 
 using Jih.Unity.EraOfNitrogen.Worlds.Runtime;
 using Jih.Unity.Infrastructure;
+using Jih.Unity.Infrastructure.HexaGrid;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -33,11 +34,17 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         [JsonProperty(nameof(CityTile))] Tile? _cityTile;
         [JsonIgnore] public Tile CityTile => _cityTile.ThrowIfNull(nameof(CityTile));
 
-        [JsonProperty(nameof(Tiles))] readonly List<Tile> _tiles = new();
+        [JsonProperty(nameof(PortTile))] Tile? _portTile;
+        [JsonIgnore] public Tile? PortTile => _portTile;
+
+        [JsonProperty(nameof(LandTiles))] readonly List<Tile> _landTiles = new();
         /// <summary>
-        /// <see cref="CityTile"/> 포함.
+        /// <see cref="CityTile"/>, <see cref="PortTile"/> 포함.
         /// </summary>
-        [JsonIgnore] public IReadOnlyList<Tile> Tiles => _tiles;
+        [JsonIgnore] public IReadOnlyList<Tile> LandTiles => _landTiles;
+
+        [JsonProperty(nameof(OceanTiles))] readonly List<Tile> _oceanTiles = new();
+        [JsonIgnore] public IReadOnlyList<Tile> OceanTiles => _oceanTiles;
 
         [JsonProperty(nameof(Citizens))] readonly List<Citizen> _citizens = new();
         [JsonIgnore] public IReadOnlyList<Citizen> Citizens => _citizens;
@@ -65,36 +72,33 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
         {
         }
 
-        public void Bind(MapProvince mapProvince)
+        public void Bind(MapProvince mapProvince, IReadOnlyDictionary<TileCoord, Tile> tilesMap, bool initialBind)
         {
             _mapProvince = mapProvince;
 
-            Tile? cityTile = null;
-
-            if (_tiles.Count <= 0)
+            if (initialBind)
             {
-                for (int i = 0; i < mapProvince.Tiles.Count; i++)
+                _cityTile = tilesMap[mapProvince.CityTile.Coord];
+
+                if (mapProvince.PortTile is not null)
                 {
-                    _tiles.Add(new Tile());
+                    _portTile = tilesMap[mapProvince.PortTile.Coord];
+                }
+
+                for (int i = 0; i < mapProvince.LandTiles.Count; i++)
+                {
+                    _landTiles.Add(tilesMap[mapProvince.LandTiles[i].Coord]);
+                }
+
+                for (int i = 0; i < mapProvince.OceanTiles.Count; i++)
+                {
+                    _oceanTiles.Add(tilesMap[mapProvince.OceanTiles[i].Coord]);
                 }
             }
-            for (int i = 0; i < mapProvince.Tiles.Count; i++)
-            {
-                MapTile mapTile = mapProvince.Tiles[i];
-                Tile tile = _tiles[i];
-                
-                tile.Bind(mapTile);
-
-                if (mapTile == mapProvince.CityTile)
-                {
-                    cityTile = tile;
-                }
-            }
-
-            _cityTile = cityTile ?? throw new InvalidOperationException("도시 셀이 프로빈스 셀 리스트에 없음.");
+            // 타일들에 대한 바인딩은 이미 월드에서 진행함.
         }
 
-        public void Initialize(World world, IReadOnlyDictionary<uint, Province> provinceMap)
+        public void Initialize(World world, IReadOnlyDictionary<uint, Province> provinceMap, WorldGrid worldGrid)
         {
             if (IsInitialized)
             {
@@ -108,6 +112,15 @@ namespace Jih.Unity.EraOfNitrogen.Worlds
 
             _connectedProvinces = new List<Province>(MapProvince.ConnectedProvinceIds.Count);
             _connectedProvinces.AddRange(MapProvince.ConnectedProvinceIds.Select(id => provinceMap[id]));
+
+            foreach (var tile in _landTiles)
+            {
+                tile.Initialize(world, this, worldGrid[tile.Coord]);
+            }
+            foreach (var tile in _oceanTiles)
+            {
+                tile.Initialize(world, this, worldGrid[tile.Coord]);
+            }
 
             IsInitialized = true;
         }

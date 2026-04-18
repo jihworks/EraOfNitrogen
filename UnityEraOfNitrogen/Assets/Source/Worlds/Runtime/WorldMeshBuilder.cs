@@ -47,7 +47,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             WorldGrid grid = World.MapGrid;
 
             List<LandChunkResult> chunks = new(_chunkCountX * _chunkCountY);
-            foreach (var ci in EnumerateChunks(_chunkCountX, _chunkCountY))
+            foreach (var ci in EnumerateChunks())
             {
                 List<WorldCell> cells = new(ChunkSize * ChunkSize);
 
@@ -152,7 +152,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             WorldGrid grid = World.MapGrid;
 
             List<OceanChunkResult> chunks = new(_chunkCountX * _chunkCountY);
-            foreach (var ci in EnumerateChunks(_chunkCountX, _chunkCountY))
+            foreach (var ci in EnumerateChunks())
             {
                 List<WorldCell> cells = new(ChunkSize * ChunkSize);
 
@@ -438,10 +438,10 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
 
             foreach (var province in World.Provinces)
             {
-                List<RoadElementResult> roadBlocks = new(province.Tiles.Count);
+                List<RoadElementResult> roadBlocks = new(province.LandTiles.Count);
                 result.Add(province, roadBlocks);
 
-                foreach (var tile in province.Tiles)
+                foreach (var tile in province.LandTiles)
                 {
                     if (!tile.HasRoad)
                     {
@@ -578,7 +578,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             List<DoodadClusterResult> result = new(World.Provinces.Count * 3);
 
             foreach (var provinceGroup in World.Provinces.SelectMany(
-                p => p.Tiles.SelectMany(
+                p => p.LandTiles.SelectMany(
                     t => t.Doodads.Select(
                         d => (Province: p, Tile: t, Doodad: d, d.Type, Index: VariantToIndex(d.Type, d.Variant)))))
                 .GroupBy(x => x.Province))
@@ -642,7 +642,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             foreach (var province in World.Provinces)
             {
                 List<(WorldCell Cell, HexaEdge Edge)> borderEdges = new();
-                foreach (var tile in province.Tiles)
+                foreach (var tile in province.LandTiles.Concat(province.OceanTiles))
                 {
                     WorldCell cell = tile.Cell;
 
@@ -832,7 +832,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
             }
         }
 
-        static IEnumerable<ChunkIndex> EnumerateChunks(int chunkCountX, int chunkCountY)
+        IEnumerable<ChunkIndex> EnumerateChunks()
         {
             static IEnumerable<HexaIndex> Enumerate(int baseGridX, int baseGridY)
             {
@@ -849,11 +849,11 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Runtime
                 }
             }
 
-            for (int cy = 0; cy < chunkCountY; cy++)
+            for (int cy = 0; cy < _chunkCountY; cy++)
             {
                 int baseGridY = cy * ChunkSize;
 
-                for (int cx = 0; cx < chunkCountX; cx++)
+                for (int cx = 0; cx < _chunkCountX; cx++)
                 {
                     int baseGridX = cx * ChunkSize;
 

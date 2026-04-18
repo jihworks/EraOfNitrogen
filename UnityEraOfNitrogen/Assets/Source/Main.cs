@@ -83,10 +83,9 @@ namespace Jih.Unity.EraOfNitrogen
                 Debug.LogError("Failed to generate map.");
                 return;
             }
-            Debug.Log($"Seed: {map.RandomSeed}");
 
             World? world = new();
-            world.Bind(map);
+            world.Bind(map, initialBind: true);
             world.Initialize();
 
             WorldMeshBuilder worldMeshBuilder = new(world);
@@ -149,7 +148,7 @@ namespace Jih.Unity.EraOfNitrogen
 
                 foreach (var province in world.Provinces)
                 {
-                    foreach (var tile in province.Tiles)
+                    foreach (var tile in province.LandTiles)
                     {
                         if (tile.RoadElement is not null)
                         {

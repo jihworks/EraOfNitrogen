@@ -49,7 +49,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
                 List<GeneratorDoodad> provinceDoodads = new();
 
-                foreach (var cell in province.Cells)
+                foreach (var cell in province.LandCells)
                 {
                     // 바다 제외
                     if (!cell.IsLand)

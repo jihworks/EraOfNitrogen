@@ -51,7 +51,7 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
             foreach (var province in provinces)
             {
-                foreach (var cell in province.Cells)
+                foreach (var cell in province.LandCells)
                 {
                     HexaIndex index = cell.Index;
 
@@ -69,8 +69,8 @@ namespace Jih.Unity.EraOfNitrogen.Worlds.Generators
 
         static Biome DetermineBiome(RandomStream random, int minX, int maxX, int minY, int maxY, GeneratorProvince province, ModelType model, double temperatureNoiseAmount, double humidityNoiseAmount, double minContinentalHumidity)
         {
-            double avgX = province.Cells.Average(c => c.Index.X);
-            double avgY = province.Cells.Average(c => c.Index.Y);
+            double avgX = province.LandCells.Average(c => c.Index.X);
+            double avgY = province.LandCells.Average(c => c.Index.Y);
 
             double temperature = CalculateBaseTemperature(minY, maxY, avgY, model);
             temperature += (random.NextDouble() - 0.5) * temperatureNoiseAmount;
